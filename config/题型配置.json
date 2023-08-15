@@ -1,0 +1,46 @@
+{
+    "url":  "https://www.wjx.cn/vm/hIVIpS7.aspx",
+    "ip_proxy": 0,
+    "deploy": [
+      {
+      "qid": 1,
+      "type": "单选",
+      "bili": [0,100]
+      },
+      {
+        "qid": 2,
+        "type": "多选",
+        "bili": [20,20,20,30,40,50]
+      },
+      {
+        "qid": 3,
+        "type": "填空",
+        "bili": [30,40,30],
+        "value": ["张三", "李四", "王五"]
+      },
+      {
+        "qid": 4,
+        "type": "下拉框",
+        "bili": [25,25,25,25]
+      },
+      {
+        "qid": 5,
+        "type": "多选-至少选择几项",
+        "bili": [0,20,20,30],
+        "min_options": 3
+      },
+      {
+        "qid": 6,
+        "type": "矩形单选",
+        "subkeys": [
+            {
+                "subkeys_qid": 1,
+                "bili": [100,0,0,0,0]
+            },{
+                "subkeys_qid": 2,
+                "bili": [0,0,0,0,100]
+            }
+        ]
+      }
+    ]
+}
