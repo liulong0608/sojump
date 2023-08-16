@@ -1,11 +1,27 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          v0.4
+**    @version          v0.5
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
 """
+from selenium.webdriver.chrome.service import Service
+
+import json
+import math
+import os
+import random
+import re
+import time
+from config import globalparam
+import requests
+from selenium import webdriver
+from selenium.webdriver import ActionChains
+from selenium.webdriver.common.by import By
+
+import DaiLiIp
+
 """
 ## 重构问卷星脚本代码
     * v0.1
@@ -19,33 +35,19 @@
     * v0.3
         * 面向过程的方式
         1、增加题型（下拉框、多选题（至少选择几项））
-
     * v0.4
         * 面向过程的方式
         1、增加题型（单选矩形题）
+    * v0.5
+        * 面向过程的方式
+        1、增加题型（排序题（随机排序））
+        2、优化验证函数和提交函数
 
 """
-import json
-import math
-import os
-import random
-import re
-import time
 
-import requests
-from selenium import webdriver
-from selenium.webdriver import ActionChains
-from selenium.webdriver.common.by import By
-
-import DaiLiIp
 
 # 读取JSON配置文件
-current_path = os.path.dirname(os.path.abspath(__file__)) + '\\'
-
-print(current_path)
-
-
-def readJsonConfig(file="../../config/题型配置.json"):
+def readJsonConfig(file=globalparam.question_config_path):
     with open(file, mode='r', encoding='utf-8') as file:
         data = json.load(file)
     return data
@@ -107,7 +109,8 @@ def driver():
         ip = _ips[match]['ip']
         port = _ips[match]['port']
         option.add_argument(f'--proxy-server={ip}:{port}')
-    driver = webdriver.Chrome(options=option)
+    service = Service('../../python/chromedriver.exe')
+    driver = webdriver.Chrome(service=service, options=option)
     driver.maximize_window()
     # driver.set_window_size(600, 400)
     # driver.set_window_position(50, 50)
@@ -199,6 +202,7 @@ def select_drop_down(qid: int, bili: list):
 def matrix_problem(qid: int, bili: list, subkeys_qid):
     """
     单选矩阵题执行函数
+    :param subkeys_qid:
     :param qid:
     :param bili:
     :return:
@@ -209,9 +213,45 @@ def matrix_problem(qid: int, bili: list, subkeys_qid):
     # for i in range(len(subkeys_num)):
     #     options = matrix_options[i].find_elements(By.CSS_SELECTOR, 'td:not(.scalerowtitletd)')
     #     options[danxuan(bili)].click()
-    options = matrix_options[subkeys_qid-1].find_elements(By.CSS_SELECTOR, 'td:not(.scalerowtitletd)')
+    options = matrix_options[subkeys_qid - 1].find_elements(By.CSS_SELECTOR, 'td:not(.scalerowtitletd)')
     options[danxuan(bili)].click()
-    print(f'第{str(qid)+"1"}题【单选矩阵题】的比例分布为：{bili}')
+    print(f'第{str(qid)}-{subkeys_qid}题【单选矩阵题】的比例分布为：{bili}')
+
+
+def JMix(qid: int, bili: list):
+    """
+    排序题执行函数
+    :param qid:
+    :param bili:
+    :return:
+    """
+    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, f"#div{qid} ul li")
+    # 按照比例对选项进行排序
+    sorted_items = sorted(options, key=lambda index: bili[options.index(index)], reverse=True)
+    # 循环点击选项
+    liangbiao_index = 0
+    temp_flag = False
+    while not temp_flag:
+        for i in range(5):
+            liangbiao_index += 1
+            sorted_items[i].click()
+            if i == 4:
+                temp_flag = True
+
+
+def random_JMix(qid: int):
+    """
+    排序题执行函数
+    :param qid:
+    :return:
+    """
+    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, f"#div{qid} ul li")
+    for i in range(1, len(options) + 1):
+        index = random.randint(i, len(options))
+        driver.find_element(By.CSS_SELECTOR, f'#div{qid} > ul > li:nth-child({index})').click()
+        time.sleep(0.5)
+    print(f'第{qid}题【排序题】的比例分布为：随机排序')
+
 
 
 def get_all_blocks():
@@ -249,18 +289,34 @@ def duoxuan(probability):
     return flag
 
 
+def randomBili(num):
+    a = 100 // num
+    yu = 100 - a * num
+    result = []
+    for i in range(num):
+        result.append(a)
+    for i in range(yu):
+        result[i] += 1
+    return result
+
+
 def submit():
     try:
         # 出现点击验证码验证
         time.sleep(1)
-        # 点击对话框的确认按钮
-        driver.find_element(By.XPATH, '//*[@id="layui-layer1"]/div[3]/a').click()
-        # 点击智能检测按钮
-        driver.find_element(By.XPATH, '//*[@id="SM_BTN_1"]').click()
+        try:
+            # 点击对话框的确认按钮
+            driver.find_element(By.XPATH, '//*[@id="layui-layer1"]/div[3]/a').click()
+            # 点击智能检测按钮
+            driver.find_element(By.XPATH, '//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
+        except:
+            # 点击智能检测按钮
+            driver.find_element(By.XPATH, '//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
+
         time.sleep(3)
     except:
         print("无验证")
-    # 滑块验证
+        # 滑块验证
     try:
         slider = driver.find_element(By.XPATH, '//*[@id="nc_1__scale_text"]/span')
         if str(slider.text).startswith("请按住滑块"):
@@ -284,10 +340,14 @@ def main():
         elif item['type'] == '下拉框':
             select_drop_down(item['qid'], item['bili'])
         elif item['type'] == '矩形单选':
-            # id = item['subkeys']['subkeys_qid' - 1]
             for i in range(len(item['subkeys'])):
                 matrix_problem(item['qid'], item['subkeys'][i]['bili'], item['subkeys'][i]['subkeys_qid'])
+        elif item['type'] == '排序':
+            JMix(item['qid'], item['bili'])
+        elif item['type'] == '随机排序' and item['bili'] == '随机':
+            random_JMix(item['qid'])
     # 提交
+    time.sleep(1)
     driver.find_element(By.XPATH, '//*[@id="ctlNext"]').click()
     submit()
 
@@ -300,13 +360,14 @@ def run():
         main()
         time.sleep(4)
         url_ = driver.current_url
-        if url != url_:
+        if 'https://www.wjx.cn/wjx/join/completemobile2.aspx?' in url_:
             count += 1
             print(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！提交IP：{_ips}")
             print("*" * 100)
             driver.get(json_data['url'])
         else:
             time.sleep(2)
+            return
 
 
 if __name__ == '__main__':
