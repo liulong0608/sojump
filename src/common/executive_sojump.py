@@ -1,13 +1,13 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          v0.5
+**    @version          v0.6
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
 """
 from selenium.webdriver.chrome.service import Service
-
+import numpy as np
 import json
 import math
 import os
@@ -42,6 +42,10 @@ import DaiLiIp
         * 面向过程的方式
         1、增加题型（排序题（随机排序））
         2、优化验证函数和提交函数
+    * v0.6
+        * 面向过程的方式
+        1、优化获取页面元素的函数
+        
 
 """
 
@@ -98,13 +102,6 @@ def driver():
         # 如果配置的0，则不需要ip代理
         pass
     elif json_data['ip_proxy'] == 1:
-        # 如果配置的1，需要ip代理
-        # daili = DaiLiIp.DaiLiIP()
-        # daili.run()
-        # matchs = get_ip_file()
-        # for match in matchs:
-        #     ip, port = match.strip().split(':')
-        #     print('代理ip：{0}:{1}'.format(ip, port))
         match = random.randint(0, len(_ips) - 1)
         ip = _ips[match]['ip']
         port = _ips[match]['port']
@@ -157,7 +154,6 @@ def select_options(qid, min_options, bili):
     while temp_flag < min_options:
         temp_answer = []
         for count in range(len(bili)):
-            # 这里假设duoxuan是一个函数，需要您自己实现
             if duoxuan(bili[count]):
                 temp_answer.append(count)
                 temp_flag += 1
@@ -165,7 +161,7 @@ def select_options(qid, min_options, bili):
                 temp_flag = 0
             elif count == len(bili) - 1 and temp_flag >= min_options:
                 for count in range(len(temp_answer)):
-                    # 这里假设ops是一个列表，包含了需要点击的元素
+                    # ops列表，包含了需要点击的元素
                     ops[temp_answer[count]].click()
     print(f"第{qid}多选题（至少{min_options}个选项）的比例分布为：{bili}")
 
@@ -193,7 +189,7 @@ def select_drop_down(qid: int, bili: list):
     """
     get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR, '.select2-selection.select2-selection--single').click()
 
-    options = driver.find_elements(By.CSS_SELECTOR, f'#select2-q{qid}-results li')
+    options = get_elements_by_css(f'#select2-q{qid}-results li')
     options = options[1:]  # 去掉第一个选项
     options[danxuan(bili)].click()
     print(f'第{qid}题【下拉框】的比例分布为：{bili}')
@@ -226,17 +222,34 @@ def JMix(qid: int, bili: list):
     :return:
     """
     options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, f"#div{qid} ul li")
+
     # 按照比例对选项进行排序
-    sorted_items = sorted(options, key=lambda index: bili[options.index(index)], reverse=True)
-    # 循环点击选项
-    liangbiao_index = 0
-    temp_flag = False
-    while not temp_flag:
-        for i in range(5):
-            liangbiao_index += 1
-            sorted_items[i].click()
-            if i == 4:
-                temp_flag = True
+    # def map_list_to_indices(lst):
+    #     array_list = []
+    #     for item in lst:
+    #         array_list.append(item)
+    #
+    #     array_list.sort(reverse=True)
+    #     map_dict = {}
+    #     for i in range(len(array_list)):
+    #         map_dict[array_list[i]] = i
+    #
+    #     a = np.zeros(len(lst), dtype=int)
+    #     for i in range(len(lst)):
+    #         a[i] = map_dict.get(lst[i])
+    #         del map_dict[lst[i]]
+    #
+    #     return list(a)
+    #
+    # sorted_indices = map_list_to_indices(bili)
+    q_lists = get_elements_by_css(f'#div{qid} > ul > li')
+    for index in bili:
+        # driver.find_element(By.CSS_SELECTOR, f'#div{qid} > ul > li:nth-child({index+1})').click()
+        q_lists[index - 1].click()
+        time.sleep(0.5)
+    print(f'第{qid}题【排序题】的比例分布为：{bili}')
+    # todo
+    # 因为按照指定的比例进行排序在vm网址不太好实现，对于排序题暂时只用随机排序random_JMix()方法
 
 
 def random_JMix(qid: int):
@@ -248,10 +261,9 @@ def random_JMix(qid: int):
     options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, f"#div{qid} ul li")
     for i in range(1, len(options) + 1):
         index = random.randint(i, len(options))
-        driver.find_element(By.CSS_SELECTOR, f'#div{qid} > ul > li:nth-child({index})').click()
+        get_element_by_css(f'#div{qid} > ul > li:nth-child({index})').click()
         time.sleep(0.5)
     print(f'第{qid}题【排序题】的比例分布为：随机排序')
-
 
 
 def get_all_blocks():
@@ -259,7 +271,7 @@ def get_all_blocks():
     获取所有题块
     :return: 所有题块的元素
     """
-    return driver.find_elements(By.CSS_SELECTOR, '.fieldset>div[class="field ui-field-contain"]')
+    return get_elements_by_css('.fieldset>div[class="field ui-field-contain"]')
 
 
 def danxuan(proportion):
@@ -300,25 +312,46 @@ def randomBili(num):
     return result
 
 
+# 封装元素定位
+def get_element_by_css(loc):
+    return driver.find_element(By.CSS_SELECTOR, loc)
+
+
+def get_elements_by_css(loc):
+    return driver.find_elements(By.CSS_SELECTOR, loc)
+
+
+def get_element_by_xpath(loc):
+    return driver.find_element(By.XPATH, loc)
+
+
+def get_elements_by_xpath(loc):
+    return driver.find_elements(By.XPATH, loc)
+
+
+# 封装通过题块获取子题块
+def get_child_blocks(qid, loc):
+    return get_all_blocks()[qid].find_elements(By.CSS_SELECTOR, loc)
+
+
 def submit():
     try:
         # 出现点击验证码验证
         time.sleep(1)
         try:
             # 点击对话框的确认按钮
-            driver.find_element(By.XPATH, '//*[@id="layui-layer1"]/div[3]/a').click()
+            get_element_by_xpath('//*[@id="layui-layer1"]/div[3]/a').click()
             # 点击智能检测按钮
-            driver.find_element(By.XPATH, '//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
+            get_element_by_xpath('//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
         except:
             # 点击智能检测按钮
-            driver.find_element(By.XPATH, '//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
-
+            get_element_by_xpath('//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
         time.sleep(3)
     except:
         print("无验证")
         # 滑块验证
     try:
-        slider = driver.find_element(By.XPATH, '//*[@id="nc_1__scale_text"]/span')
+        slider = get_element_by_xpath('//*[@id="nc_1__scale_text"]/span')
         if str(slider.text).startswith("请按住滑块"):
             width = slider.size.get('width')
             ActionChains(driver).drag_and_drop_by_offset(slider, width, 0).perform()
@@ -342,13 +375,13 @@ def main():
         elif item['type'] == '矩形单选':
             for i in range(len(item['subkeys'])):
                 matrix_problem(item['qid'], item['subkeys'][i]['bili'], item['subkeys'][i]['subkeys_qid'])
-        elif item['type'] == '排序':
-            JMix(item['qid'], item['bili'])
-        elif item['type'] == '随机排序' and item['bili'] == '随机':
+        # elif item['type'] == '排序':
+        #     JMix(item['qid'], item['bili'])
+        elif item['type'] == '排序' and item['bili'] == '随机':
             random_JMix(item['qid'])
     # 提交
     time.sleep(1)
-    driver.find_element(By.XPATH, '//*[@id="ctlNext"]').click()
+    get_element_by_xpath('//*[@id="ctlNext"]').click()
     submit()
 
 
