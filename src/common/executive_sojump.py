@@ -1,7 +1,7 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          v0.6
+**    @version          v0.7
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
@@ -45,7 +45,9 @@ import DaiLiIp
     * v0.6
         * 面向过程的方式
         1、优化获取页面元素的函数
-        
+    * v0.7
+        * 面向过程的方式
+        1、增加题型（单选量表题）    
 
 """
 
@@ -266,6 +268,19 @@ def random_JMix(qid: int):
     print(f'第{qid}题【排序题】的比例分布为：随机排序')
 
 
+# 单选量表题执行函数
+def single_scale(qid: int, bili: list):
+    """
+    单选量表题执行函数
+    :param qid: 题号
+    :param bili: 比例
+    :return:
+    """
+    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, 'ul[tp="d"] li')
+    options[danxuan(bili)].click()
+    print(f'第{qid}题【单选量表题】的比例分布为：{bili}')
+
+
 def get_all_blocks():
     """
     获取所有题块
@@ -379,6 +394,8 @@ def main():
         #     JMix(item['qid'], item['bili'])
         elif item['type'] == '排序' and item['bili'] == '随机':
             random_JMix(item['qid'])
+        elif item['type'] == '单选量表':
+            single_scale(item['qid'], item['bili'])
     # 提交
     time.sleep(1)
     get_element_by_xpath('//*[@id="ctlNext"]').click()
