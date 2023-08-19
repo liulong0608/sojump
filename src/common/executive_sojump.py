@@ -51,6 +51,10 @@ import DaiLiIp
     * v0.8
         * 面向过程的方式
         1、增加题型（多级下拉题-随机、多级下拉题-不随机）
+    * v0.8.2
+        * 面向过程的方式
+        1、完善多级下拉题-不随机
+        2、增加清除cookie缓存机制
 """
 
 
@@ -292,8 +296,12 @@ def multilevel_pulldown_nonrandom(qid: int, subkeys_qid: int, option_value: str)
     :param option_value: 选项值
     :return:
     """
-    get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR, f'#div{qid} input#q{qid}').click()
-    get_element_by_css(f'#divFrameData div.ui-select:nth-child({subkeys_qid}) select')
+    select_element = get_element_by_css(f'#divFrameData div.ui-select:nth-child({subkeys_qid}) select')
+    if select_element:
+        driver.execute_script(f"arguments[0].value='{option_value}';",
+                              select_element)
+        driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", select_element)
+        time.sleep(0.5)
 
 
 def multilevel_pulldown_random(qid: int):
@@ -458,10 +466,14 @@ def main():
             random_JMix(item['qid'])
         elif item['type'] == '单选量表':
             single_scale(item['qid'], item['bili'])
-        # elif item['type'] == '多级下拉框':
-        #     for i in range(len(item['subkeys'])):
-        #         multilevel_pulldown_nonrandom(item['qid'], item['subkeys'][i]['subkeys_qid'],
-        #                                       item['subkeys'][i]['value'])
+        elif item['type'] == '多级下拉框':
+            get_all_blocks()[item['qid'] - 1].find_element(By.CSS_SELECTOR,
+                                                           f"#div{item['qid']} input#q{item['qid']}").click()
+            time.sleep(1)
+            for i in range(len(item['subkeys'])):
+                multilevel_pulldown_nonrandom(item['qid'], item['subkeys'][i]['subkeys_qid'],
+                                              item['subkeys'][i]['value'][0])
+            click(".layer_save_btn a")
         elif item['type'] == '多级下拉框-随机':
             multilevel_pulldown_random(item['qid'])
     # 提交
@@ -473,6 +485,7 @@ def main():
 def run():
     while True:
         global count
+        driver.delete_all_cookies()
         driver.get(json_data['url'])
         url = driver.current_url
         main()
