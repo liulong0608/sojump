@@ -59,6 +59,35 @@
         "qid": 8,
         "type": "单选量表",
         "bili": [20,20,20,20,20]
+      },
+      {
+        "qid": 10,
+        "type": "多级下拉框",
+        "Drop-downNumber": 4,
+        "subkeys": [
+            {
+                "subkeys_qid": 1,
+                "value": ["华北地区"]
+            },
+            {
+                "subkeys_qid": 2,
+                "value": ["山东省"]
+            },
+            {
+                "subkeys_qid": 3,
+                "value": ["青岛市"]
+            },
+            {
+                "subkeys_qid": 4,
+                "value": ["黄岛区"]
+            }
+        ]
+      },
+      {
+        "qid": 11,
+        "type": "多级下拉框-随机",
+        "Drop-downNumber": 4,
+        "property": "随机"
       }
     ]
 }
