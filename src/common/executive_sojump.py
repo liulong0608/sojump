@@ -1,7 +1,7 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          v0.7
+**    @version          v0.8
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
@@ -48,7 +48,9 @@ import DaiLiIp
     * v0.7
         * 面向过程的方式
         1、增加题型（单选量表题）    
-
+    * v0.8
+        * 面向过程的方式
+        1、增加题型（多级下拉题-随机、多级下拉题-不随机）
 """
 
 
@@ -108,6 +110,11 @@ def driver():
         ip = _ips[match]['ip']
         port = _ips[match]['port']
         option.add_argument(f'--proxy-server={ip}:{port}')
+
+    # 添加user-agent
+    option.add_argument("user-agent=Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/89.0.4389.105 Mobile Safari/537.36 MicroMessenger/8.0.0.1841(0x2800005C) "
+                        "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN")
     service = Service('../../python/chromedriver.exe')
     driver = webdriver.Chrome(service=service, options=option)
     driver.maximize_window()
@@ -281,6 +288,62 @@ def single_scale(qid: int, bili: list):
     print(f'第{qid}题【单选量表题】的比例分布为：{bili}')
 
 
+def multilevel_pulldown_nonrandom(qid: int, subkeys_qid: int, option_value: str):
+    """
+    多级下拉框执行函数-选项不随机
+    :param qid: 题号
+    :param subkeys_qid: 子题号
+    :param option_value: 选项值
+    :return:
+    """
+    get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR, f'#div{qid} input#q{qid}').click()
+    get_element_by_css(f'#divFrameData div.ui-select:nth-child({subkeys_qid}) select')
+
+
+def multilevel_pulldown_random(qid: int):
+    """
+    多级下拉框执行函数-选项随机
+    :param qid: 题号
+    :param subkeys_qid: 子题号
+    :return:
+    """
+
+    def select_option(select_element, options):
+        # 将下拉列表的元素放置在列表中
+        for index in range(len(select_element.find_elements(By.CSS_SELECTOR, 'option'))):
+            options.append(select_element.find_elements(By.CSS_SELECTOR, 'option')[index].text)
+        # 排除第一个
+        options.pop(0)
+        driver.execute_script(f"arguments[0].value='{options[random.randint(0, len(options) - 1)]}';", select_element)
+        driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", select_element)
+
+    province_options = []
+    city_options = []
+    area_options = []
+    town_options = []
+    get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR, f'#div{qid} input#q{qid}').click()
+    time.sleep(1)
+
+    province_select = get_element_by_css(f'#divFrameData div.ui-select:nth-child({1}) select')
+    if province_select:
+        select_option(province_select, province_options)
+
+    city_select = get_element_by_css(f"#divFrameData div.ui-select:nth-child({2}) select")
+    if city_select:
+        select_option(city_select, city_options)
+
+    area_select = get_element_by_css(f"#divFrameData div.ui-select:nth-child({3}) select")
+    if area_select:
+        select_option(area_select, area_options)
+
+    town_select = get_element_by_css(f"#divFrameData div.ui-select:nth-child({4}) select")
+    if town_select:
+        select_option(town_select, town_options)
+
+    time.sleep(0.5)
+    click(".layer_save_btn a")
+
+
 def get_all_blocks():
     """
     获取所有题块
@@ -344,6 +407,10 @@ def get_elements_by_xpath(loc):
     return driver.find_elements(By.XPATH, loc)
 
 
+def click(loc):
+    driver.find_element(By.CSS_SELECTOR, loc).click()
+
+
 # 封装通过题块获取子题块
 def get_child_blocks(qid, loc):
     return get_all_blocks()[qid].find_elements(By.CSS_SELECTOR, loc)
@@ -396,6 +463,12 @@ def main():
             random_JMix(item['qid'])
         elif item['type'] == '单选量表':
             single_scale(item['qid'], item['bili'])
+        # elif item['type'] == '多级下拉框':
+        #     for i in range(len(item['subkeys'])):
+        #         multilevel_pulldown_nonrandom(item['qid'], item['subkeys'][i]['subkeys_qid'],
+        #                                       item['subkeys'][i]['value'])
+        elif item['type'] == '多级下拉框-随机':
+            multilevel_pulldown_random(item['qid'])
     # 提交
     time.sleep(1)
     get_element_by_xpath('//*[@id="ctlNext"]').click()
