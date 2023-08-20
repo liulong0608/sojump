@@ -55,6 +55,9 @@ import DaiLiIp
         * 面向过程的方式
         1、完善多级下拉题-不随机
         2、增加清除cookie缓存机制
+    *v0.9
+        * 面向过程的方式
+        1、增加题型（多项填空）
 """
 
 
@@ -347,6 +350,21 @@ def multilevel_pulldown_random(qid: int):
     click(".layer_save_btn a")
 
 
+def multinomial_filling(qid: int, subkeys_qid: int, bili: list, value: str):
+    """
+    多项填空题执行函数
+    :param qid: 题号
+    :param subkeys_qid: 子题号
+    :param bili: 比例
+    :param value: 待填空的值
+    :return:
+    """
+    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, '.topictext span.textCont')
+    fill_value = value[danxuan(bili)]
+    options[subkeys_qid].send_keys(fill_value)
+    print(f'第{str(qid)}-{subkeys_qid+1}题【多项填空题】的比例分布为：{bili}')
+
+
 def get_all_blocks():
     """
     获取所有题块
@@ -455,6 +473,9 @@ def main():
             select_options(item['qid'], item['min_options'], item['bili'])
         elif item['type'] == '填空':
             fill_in_the_blank(item['qid'], item['bili'], item['value'])
+        elif item['type'] == '多项填空':
+            for i in range(len(item['subkeys'])):
+                multinomial_filling(item['qid'], i, item['subkeys'][i]['bili'], item['subkeys'][i]['value'])
         elif item['type'] == '下拉框':
             select_drop_down(item['qid'], item['bili'])
         elif item['type'] == '矩形单选':
