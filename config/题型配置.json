@@ -4,34 +4,34 @@
     "deploy": [
       {
       "qid": 1,
-      "type": "单选",
+      "type": "单选题",
       "bili": [0,100]
       },
       {
         "qid": 2,
-        "type": "多选",
+        "type": "多选题",
         "bili": [20,20,20,30,40,50]
       },
       {
         "qid": 3,
-        "type": "填空",
+        "type": "填空题",
         "bili": [30,40,30],
         "value": ["张三", "李四", "王五"]
       },
       {
         "qid": 4,
-        "type": "下拉框",
+        "type": "下拉题",
         "bili": [25,25,25,25]
       },
       {
         "qid": 5,
-        "type": "多选-至少选择几项",
+        "type": "多选题-至少选择几项",
         "bili": [0,20,20,30],
         "min_options": 3
       },
       {
         "qid": 6,
-        "type": "矩形单选",
+        "type": "单选矩阵题",
         "subkeys": [
             {
                 "subkeys_qid": 1,
@@ -52,17 +52,17 @@
       },
       {
         "qid": 7,
-        "type": "排序",
+        "type": "排序题",
         "bili": "随机"
       },
       {
         "qid": 8,
-        "type": "单选量表",
+        "type": "单选量表题",
         "bili": [20,20,20,20,20]
       },
       {
         "qid": 9,
-        "type": "多项填空",
+        "type": "多项填空题",
         "subkeys": [
             {
                 "subkeys_qid": 1,
@@ -83,30 +83,29 @@
       },
       {
         "qid": 10,
-        "type": "多级下拉框",
-        "Drop-downNumber": 4,
+        "type": "多级下拉题-不随机",
         "subkeys": [
             {
                 "subkeys_qid": 1,
-                "value": ["华北地区"]
+                "value": "华北地区"
             },
             {
                 "subkeys_qid": 2,
-                "value": ["山东省"]
+                "value": "山东省"
             },
             {
                 "subkeys_qid": 3,
-                "value": ["青岛市"]
+                "value": "青岛市"
             },
             {
                 "subkeys_qid": 4,
-                "value": ["黄岛区"]
+                "value": "黄岛区"
             }
         ]
       },
       {
         "qid": 11,
-        "type": "多级下拉框-随机",
+        "type": "多级下拉题-随机",
         "Drop-downNumber": 4,
         "property": "随机"
       }
