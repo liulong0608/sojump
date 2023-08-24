@@ -693,4 +693,11 @@ def run(x, y):
             return "提交时遇到错误，程序终止."
 
 
-
+if __name__ == '__main__':
+    count = 0  # 初始提交份数
+    thread_1 = threading.Thread(target=run, args=(0, 0))
+    thread_1.start()
+    # thread_2 = threading.Thread(target=run, args=(512, 0))
+    # thread_2.start()
+    # thread_3 = threading.Thread(target=run, args=(1024, 0))
+    # thread_3.start()
