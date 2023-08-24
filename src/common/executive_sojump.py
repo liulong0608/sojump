@@ -94,7 +94,7 @@ driver = None
 
 def get_ip(ip_num=1):
     if json_data['ip_proxy'] != 0:
-        proxyPool = f'http://http.tiqu.alibabaapi.com/getip?num={ip_num}&type=1&pack=118557&port=1&lb=1&pb=45&regions='
+        proxyPool = f'http://http.tiqu.alibabaapi.com/getip?num={ip_num}&type=1&pack=你的id&port=1&lb=1&pb=45&regions='
         ips = []
         ip_port = requests.get(proxyPool).text
         pools = re.findall(r"(\d+\.\d+\.\d+\.\d+):(\d+)", ip_port)
@@ -668,6 +668,12 @@ def run(x, y):
         port = _ips[match]['port']
         option.add_argument(f'--proxy-server={ip}:{port}')
 
+    # 添加user-agent
+    option.add_argument(
+            "user-agent=Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/89.0.4389.105 Mobile Safari/537.36 MicroMessenger/8.0.0.1841(0x2800005C) "
+            "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN")
+
     service = Service('../../python/chromedriver.exe')
     driver = webdriver.Chrome(service=service, options=option)
     driver.set_window_size(512, 1440)
@@ -693,4 +699,11 @@ def run(x, y):
             return "提交时遇到错误，程序终止."
 
 
-
+if __name__ == '__main__':
+    count = 0  # 初始提交份数
+    thread_1 = threading.Thread(target=run, args=(0, 0))
+    thread_1.start()
+    # thread_2 = threading.Thread(target=run, args=(512, 0))
+    # thread_2.start()
+    # thread_3 = threading.Thread(target=run, args=(1024, 0))
+    # thread_3.start()
