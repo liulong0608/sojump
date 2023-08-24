@@ -73,6 +73,11 @@ import DaiLiIp
         6、优化判断题型执行相关题型函数逻辑
         7、优化(多级下拉框执行函数-选项随机)执行函数的逻辑
         8、增加多线程方式执行脚本（todo）
+    * v1.1
+        * 面向过程的方式
+        1、优化多级下拉框题执行速度
+        2、新增题型（矩阵填空题）
+        3、暂时关闭多线程执行方式
 """
 
 
@@ -85,6 +90,7 @@ def readJsonConfig(file=globalparam.question_config_path):
 
 json_data = readJsonConfig()
 driver = None
+
 
 def get_ip(ip_num=1):
     if json_data['ip_proxy'] != 0:
@@ -307,18 +313,19 @@ def multilevel_pulldown_nonrandom(qid: int):
     """
     get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR,
                                            f"#div{qid} input#q{qid}").click()
-    time.sleep(1)
+    # 隐式等待
+    driver.implicitly_wait(10)
     items = json_data['deploy']  # all question list
     subkeys_list = items[qid - 1]['subkeys']
     for index in range(len(subkeys_list)):
         select_element = get_element_by_css(
             f'#divFrameData div.ui-select:nth-child({subkeys_list[index]["subkeys_qid"]}) select')
-        time.sleep(1)
+        # time.sleep(1)
         if select_element:
             driver.execute_script(f"arguments[0].value='{subkeys_list[index]['value']}';",
                                   select_element)
             driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", select_element)
-            time.sleep(0.5)
+            time.sleep(0.2)
             print(
                 f"第{qid}题【多级下拉框】的第{subkeys_list[index]['subkeys_qid']}个select选择为：{subkeys_list[index]['value']}")
     click(".layer_save_btn a")
@@ -331,27 +338,27 @@ def multilevel_pulldown_random(qid: int):
     :return:
     """
     items = json_data['deploy']
-    list_num = items[qid-1]['Drop-downNumber']
+    list_num = items[qid - 1]['Drop-downNumber']
     options = {}
     for i in range(1, list_num + 1):
         # 创建i个空列表
         options[f"options_{i}"] = []
     # options["options_1"]
     get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR, f'#div{qid} input#q{qid}').click()
-    time.sleep(1)
+    driver.implicitly_wait(10)
     # 获取有多少个select
     select_list = get_elements_by_css(f'#divFrameData div.ui-select')
-    select_num = len(select_list)
+    # select_num = len(select_list)
     for index in range(list_num):
         select_element = get_element_by_css(
             f'#divFrameData div.ui-select:nth-child({index + 1}) select')
         if select_element:
             options[f"options_{index + 1}"].append(select_element)
             select_option(select_element, options[f"options_{index + 1}"])
-            time.sleep(0.5)
+            time.sleep(0.2)
             print(
                 f"第{qid}题【多级下拉框】的第{index + 1}个select选择为：随机选项")
-    time.sleep(0.5)
+    time.sleep(0.3)
     click(".layer_save_btn a")
 
 
@@ -369,6 +376,22 @@ def multinomial_filling(qid: int):
         options[index].send_keys(fill_value)
         print(
             f'第{str(qid)}-{subkeys_list[index]["subkeys_qid"]}题【多项填空题】的比例分布为：{subkeys_list[index]["bili"]}')
+
+
+def matrix_filling(qid: int):
+    """
+    矩阵填空题执行函数
+    :param qid: 题号
+    :return:
+    """
+    items = json_data['deploy']
+    subkeys_list = items[qid - 1]['subkeys']
+    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, 'div.ui-input-text textarea')
+    for index in range(len(subkeys_list)):
+        fill_value = subkeys_list[index]['value'][danxuan(subkeys_list[index]['bili'])]
+        options[index].send_keys(fill_value)
+        print(
+            f'第{str(qid)}-{subkeys_list[index]["subkeys_qid"]}题【矩阵填空题】的比例分布为：{subkeys_list[index]["bili"]}')
 
 
 def get_all_blocks():
@@ -425,8 +448,8 @@ def submit(s_time):
     """
     time.sleep(s_time)
     click('//*[@id="ctlNext"]', 'xpath')
-    errorMessage = get_element_by_css('.errorMessage')
-    if errorMessage:
+    errorMessage = get_element_by_css('.errorMessage').text
+    if errorMessage == "请选择选项":
         print("提交失败，存在未选择的题，请检查...")
 
 
@@ -523,18 +546,18 @@ def verify():
         time.sleep(1)
         try:
             # 点击对话框的确认按钮
-            get_element_by_xpath('//*[@id="layui-layer1"]/div[3]/a').click()
+            driver.find_element(By.XPATH, '//*[@id="layui-layer1"]/div[3]/a').click()
             # 点击智能检测按钮
-            get_element_by_xpath('//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
+            driver.find_element(By.XPATH, '//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
         except:
             # 点击智能检测按钮
-            get_element_by_xpath('//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
+            driver.find_element(By.XPATH, '//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
         time.sleep(3)
     except:
         print("无验证")
         # 滑块验证
     try:
-        slider = get_element_by_xpath('//*[@id="nc_1__scale_text"]/span')
+        slider = driver.find_element(By.XPATH, '//*[@id="nc_1__scale_text"]/span')
         if str(slider.text).startswith("请按住滑块"):
             width = slider.size.get('width')
             ActionChains(driver).drag_and_drop_by_offset(slider, width, 0).perform()
@@ -560,6 +583,10 @@ def handle_fill_blank(item):  # 填空
 
 def handle_multinomial_filling(item):  # 多项填空
     multinomial_filling(item['qid'])
+
+
+def handle_matrix_filling(item):  # 矩阵填空
+    matrix_filling(item['qid'])
 
 
 def handle_select_drop_down(item):  # 下拉框
@@ -601,6 +628,7 @@ def main():
         '多选题-至少选择几项': handle_select_option,
         '填空题': handle_fill_blank,
         '多项填空题': handle_multinomial_filling,
+        '矩阵填空题': handle_matrix_filling,
         '下拉题': handle_select_drop_down,
         '多级下拉题-不随机': handle_multilevel_pulldown_nonrandom,
         '多级下拉题-随机': handle_multilevel_pulldown_random,
@@ -666,10 +694,10 @@ def run(x, y):
 
 
 if __name__ == '__main__':
-    count = 0   # 初始提交份数
+    count = 0  # 初始提交份数
     thread_1 = threading.Thread(target=run, args=(0, 0))
     thread_1.start()
-    thread_2 = threading.Thread(target=run, args=(512, 0))
-    thread_2.start()
-    thread_3 = threading.Thread(target=run, args=(1024, 0))
-    thread_3.start()
+    # thread_2 = threading.Thread(target=run, args=(512, 0))
+    # thread_2.start()
+    # thread_3 = threading.Thread(target=run, args=(1024, 0))
+    # thread_3.start()
