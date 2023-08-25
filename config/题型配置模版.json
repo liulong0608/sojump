@@ -8,7 +8,8 @@
       {
       "qid": 1,
       "type": "单选题",
-      "bili": [0,100]
+      "bili": [50,50],
+      "filling_option": {"option": 1, "fill_value": "没什么好填的"}
       },
       {
         "qid": 2,

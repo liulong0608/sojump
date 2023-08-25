@@ -84,7 +84,7 @@ from src.common.DaiLiIp import DaiLiIP
         3、回滚到多线程之前的版本
     * v1.3
         * 面向过程的方式
-        1、新增题型（矩阵滑块题、矩阵量表题 ）
+        1、新增题型（矩阵滑块题、矩阵量表题、单选题选项附加填空）
 """
 
 
@@ -167,8 +167,12 @@ def single_selection(qid: int, bili: list):
     :param bili: 比例
     :return:
     """
+    itmes = json_data['deploy'][0]
     options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-radio')
-    options[danxuan(bili)].click()
+    index = danxuan(bili)
+    options[index].click()
+    if index == itmes['filling_option']['option']:
+        get_element_by_css('.ui-radio div input.OtherRadioText').send_keys(itmes['filling_option']['fill_value'])
     print(f"第{qid}题【单选题】的比例分布为：{bili}")
 
 
