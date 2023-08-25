@@ -1,6 +1,9 @@
 {
     "url":  "https://www.wjx.cn/vm/hIVIpS7.aspx",
     "ip_proxy": 0,
+    "wx_respond": 0,
+    "submit_time": 2,
+    "submit_random_time": {"flag": true, "min": 1, "max": 5},
     "deploy": [
       {
       "qid": 1,

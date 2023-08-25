@@ -1,7 +1,7 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          v1.1
+**    @version          v1.2
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
@@ -25,8 +25,7 @@ from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 
-import DaiLiIp
-
+from src.common.DaiLiIp import DaiLiIP
 """
 ## 重构问卷星脚本代码
     * v0.1
@@ -78,6 +77,11 @@ import DaiLiIp
         1、优化多级下拉框题执行速度
         2、新增题型（矩阵填空题）
         3、暂时关闭多线程执行方式
+    * v1.2
+        * 面向过程的方式
+        1、修复一些问题
+        2、通过读取配置文件决定提交时间，是否修改userAgent
+        3、回滚到多线程之前的版本
 """
 
 
@@ -89,7 +93,6 @@ def readJsonConfig(file=globalparam.question_config_path):
 
 
 json_data = readJsonConfig()
-driver = None
 
 
 def get_ip(ip_num=1):
@@ -125,7 +128,7 @@ def get_ip_file(ip_num=1):  # 获取指定ip个数
 _ips = get_ip()
 
 
-def driver(x, y):
+def driver():
     option = webdriver.ChromeOptions()
     option.add_experimental_option('excludeSwitches', ['enable-automation'])
     option.add_experimental_option('useAutomationExtension', False)
@@ -138,11 +141,17 @@ def driver(x, y):
         ip = _ips[match]['ip']
         port = _ips[match]['port']
         option.add_argument(f'--proxy-server={ip}:{port}')
-
+    if json_data['wx_respond'] == 1:
+        # 添加user-agent
+        option.add_argument(
+                "user-agent=Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/89.0.4389.105 Mobile Safari/537.36 MicroMessenger/8.0.0.1841(0x2800005C) "
+                "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN")
     service = Service('../../python/chromedriver.exe')
     driver = webdriver.Chrome(service=service, options=option)
-    driver.set_window_size(512, 1440)
-    driver.set_window_position(x, y)
+    driver.maximize_window()
+    # driver.set_window_size(512, 1440)
+    # driver.set_window_position(x, y)
     driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument',
                            {'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'})
     return driver
@@ -313,8 +322,7 @@ def multilevel_pulldown_nonrandom(qid: int):
     """
     get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR,
                                            f"#div{qid} input#q{qid}").click()
-    # 隐式等待
-    driver.implicitly_wait(10)
+    time.sleep(1)
     items = json_data['deploy']  # all question list
     subkeys_list = items[qid - 1]['subkeys']
     for index in range(len(subkeys_list)):
@@ -325,7 +333,7 @@ def multilevel_pulldown_nonrandom(qid: int):
             driver.execute_script(f"arguments[0].value='{subkeys_list[index]['value']}';",
                                   select_element)
             driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", select_element)
-            time.sleep(0.2)
+            time.sleep(0.5)
             print(
                 f"第{qid}题【多级下拉框】的第{subkeys_list[index]['subkeys_qid']}个select选择为：{subkeys_list[index]['value']}")
     click(".layer_save_btn a")
@@ -345,7 +353,7 @@ def multilevel_pulldown_random(qid: int):
         options[f"options_{i}"] = []
     # options["options_1"]
     get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR, f'#div{qid} input#q{qid}').click()
-    driver.implicitly_wait(10)
+    time.sleep(1)
     # 获取有多少个select
     select_list = get_elements_by_css(f'#divFrameData div.ui-select')
     # select_num = len(select_list)
@@ -358,7 +366,7 @@ def multilevel_pulldown_random(qid: int):
             time.sleep(0.2)
             print(
                 f"第{qid}题【多级下拉框】的第{index + 1}个select选择为：随机选项")
-    time.sleep(0.3)
+    time.sleep(0.5)
     click(".layer_save_btn a")
 
 
@@ -647,40 +655,14 @@ def main():
             print(f"Unsupported item type:{item_type}")
     # 提交
     time.sleep(1)
-    submit(2)  # 等待2s后提交
+    if json_data['submit_random_time']['flag']:
+        submit(random.randint(json_data['submit_random_time']['min'], json_data['submit_random_time']['max']))
+    else:
+        submit(json_data['submit_time'])  # 等待设定的秒数后提交
     verify()
 
 
-def run(x, y):
-    global driver
-    global json_data
-    json_data = readJsonConfig()
-    option = webdriver.ChromeOptions()
-    option.add_experimental_option('excludeSwitches', ['enable-automation'])
-    option.add_experimental_option('useAutomationExtension', False)
-    # 随机获取某个代理值
-    if json_data['ip_proxy'] == 0:
-        # 如果配置的0，则不需要ip代理
-        pass
-    elif json_data['ip_proxy'] == 1:
-        match = random.randint(0, len(_ips) - 1)
-        ip = _ips[match]['ip']
-        port = _ips[match]['port']
-        option.add_argument(f'--proxy-server={ip}:{port}')
-
-    # 添加user-agent
-    option.add_argument(
-            "user-agent=Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/89.0.4389.105 Mobile Safari/537.36 MicroMessenger/8.0.0.1841(0x2800005C) "
-            "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN")
-
-    service = Service('../../python/chromedriver.exe')
-    driver = webdriver.Chrome(service=service, options=option)
-    driver.set_window_size(512, 1440)
-    driver.set_window_position(x, y)
-    driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument',
-                           {'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'})
-    # driver = driver(x, y)
+def run():
     while True:
         global count
         driver.delete_all_cookies()
@@ -701,9 +683,5 @@ def run(x, y):
 
 if __name__ == '__main__':
     count = 0  # 初始提交份数
-    thread_1 = threading.Thread(target=run, args=(0, 0))
-    thread_1.start()
-    # thread_2 = threading.Thread(target=run, args=(512, 0))
-    # thread_2.start()
-    # thread_3 = threading.Thread(target=run, args=(1024, 0))
-    # thread_3.start()
+    driver = driver()
+    run()
