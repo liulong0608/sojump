@@ -84,7 +84,7 @@ from src.common.DaiLiIp import DaiLiIP
         3、回滚到多线程之前的版本
     * v1.3
         * 面向过程的方式
-        1、新增题型（矩阵滑块题）
+        1、新增题型（矩阵滑块题、矩阵量表题）
 """
 
 
@@ -647,8 +647,8 @@ def handle_single_scale(item):  # 单选量表题
     single_scale(item['qid'], item['bili'])
 
 
-def handle_multi_scale(item):  # 多选量表题
-    pass
+def handle_matrix_scale(item):  # 矩阵量表题
+    matrix_problem(item['qid'])
 
 
 def handle_matrix_slider_problem(item):  # 矩阵滑块题
@@ -670,7 +670,7 @@ def main():
         '单选矩阵题': handle_matrix_problem,
         '多选矩阵题': handle_matrix_multiSelect,
         '单选量表题': handle_single_scale,
-        '多选量表题': handle_multi_scale,
+        '矩阵量表题': handle_matrix_scale,
         '矩阵滑块题': handle_matrix_slider_problem
     }
     for item in json_data['deploy']:
