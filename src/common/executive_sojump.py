@@ -1,7 +1,7 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          v1.2
+**    @version          v1.3
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
@@ -10,7 +10,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
-import numpy as np
 import json
 import math
 import os
@@ -26,6 +25,7 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 
 from src.common.DaiLiIp import DaiLiIP
+
 """
 ## 重构问卷星脚本代码
     * v0.1
@@ -82,6 +82,9 @@ from src.common.DaiLiIp import DaiLiIP
         1、修复一些问题
         2、通过读取配置文件决定提交时间，是否修改userAgent
         3、回滚到多线程之前的版本
+    * v1.3
+        * 面向过程的方式
+        1、新增题型（矩阵滑块题）
 """
 
 
@@ -144,9 +147,9 @@ def driver():
     if json_data['wx_respond'] == 1:
         # 添加user-agent
         option.add_argument(
-                "user-agent=Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/89.0.4389.105 Mobile Safari/537.36 MicroMessenger/8.0.0.1841(0x2800005C) "
-                "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN")
+            "user-agent=Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/89.0.4389.105 Mobile Safari/537.36 MicroMessenger/8.0.0.1841(0x2800005C) "
+            "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN")
     service = Service('../../python/chromedriver.exe')
     driver = webdriver.Chrome(service=service, options=option)
     driver.maximize_window()
@@ -402,6 +405,25 @@ def matrix_filling(qid: int):
             f'第{str(qid)}-{subkeys_list[index]["subkeys_qid"]}题【矩阵填空题】的比例分布为：{subkeys_list[index]["bili"]}')
 
 
+def matrix_slider_problem(qid: int):
+    """
+    矩阵滑块题执行函数
+    :return:
+    """
+    items = json_data['deploy']
+    subkeys_list = items[qid - 1]['subkeys']
+    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, 'input.ui-slider-input')
+    for index in range(len(subkeys_list)):
+        if subkeys_list[index]['value_random']:
+            fill_value = random.randint(subkeys_list[index]['value_random']['min'], subkeys_list[index]['value_random']['max'])
+            options[index].send_keys(fill_value)
+        else:
+            fill_value = subkeys_list[index]['value']
+            options[index].send_keys(fill_value)
+        print(
+            f'第{str(qid)}-{subkeys_list[index]["subkeys_qid"]}题【矩阵滑块题】的选项值为：{fill_value}')
+
+
 def get_all_blocks():
     """
     获取所有题块
@@ -629,6 +651,10 @@ def handle_multi_scale(item):  # 多选量表题
     pass
 
 
+def handle_matrix_slider_problem(item):  # 矩阵滑块题
+    matrix_slider_problem(item['qid'])
+
+
 def main():
     handler_mapping = {
         '单选题': handle_single_selection,
@@ -644,7 +670,8 @@ def main():
         '单选矩阵题': handle_matrix_problem,
         '多选矩阵题': handle_matrix_multiSelect,
         '单选量表题': handle_single_scale,
-        '多选量表题': handle_multi_scale
+        '多选量表题': handle_multi_scale,
+        '矩阵滑块题': handle_matrix_slider_problem
     }
     for item in json_data['deploy']:
         item_type = item['type']
