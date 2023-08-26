@@ -98,8 +98,16 @@ def readJsonConfig(file=globalparam.question_config_path):
 json_data = readJsonConfig()
 
 
-def get_ip(ip_num=1):
-    if json_data['ip_proxy'] != 0:
+def get_ip(ip_num=json_data['ip_proxy']['ip_num']):
+    """
+    通过api获取代理ip,获取指定ip个数
+    :param ip_num: ip个数
+    :return: List
+
+    Usage:
+        [{'ip': '117.31.87.23', 'port': '43351'}]
+    """
+    if json_data['ip_proxy']['flag']:
         proxyPool = f'http://http.tiqu.alibabaapi.com/getip?num={ip_num}&type=1&pack=你的id&port=1&lb=1&pb=45&regions='
         ips = []
         ip_port = requests.get(proxyPool).text
@@ -117,17 +125,6 @@ def get_ip(ip_num=1):
     return '本地IP'
 
 
-def get_ip_file(ip_num=1):  # 获取指定ip个数
-    """
-    通过文件获取代理ip,获取指定ip个数
-    :return:
-    """
-    with open('ip.txt', 'r') as f:
-        lines = f.readlines()
-        selected_lines = lines[:ip_num]
-        return selected_lines
-
-
 _ips = get_ip()
 
 
@@ -136,11 +133,12 @@ def driver():
     option.add_experimental_option('excludeSwitches', ['enable-automation'])
     option.add_experimental_option('useAutomationExtension', False)
     # 随机获取某个代理值
-    if json_data['ip_proxy'] == 0:
+    if not json_data['ip_proxy']['flag']:
         # 如果配置的0，则不需要ip代理
         pass
-    elif json_data['ip_proxy'] == 1:
+    elif json_data['ip_proxy']['flag']:
         match = random.randint(0, len(_ips) - 1)
+        global ip, port
         ip = _ips[match]['ip']
         port = _ips[match]['port']
         option.add_argument(f'--proxy-server={ip}:{port}')
@@ -367,6 +365,7 @@ def multilevel_pulldown_random(qid: int):
     for index in range(list_num):
         select_element = get_element_by_css(
             f'#divFrameData div.ui-select:nth-child({index + 1}) select')
+        # select_element = select_list[index]
         if select_element:
             options[f"options_{index + 1}"].append(select_element)
             select_option(select_element, options[f"options_{index + 1}"])
@@ -704,7 +703,7 @@ def run():
         url_ = driver.current_url
         if 'https://www.wjx.cn/wjx/join/completemobile2.aspx?' in url_:
             count += 1
-            print(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！提交IP：{_ips}")
+            print(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！提交IP：{ip}:{port}")
             print("*" * 100)
             driver.get(json_data['url'])
         else:
