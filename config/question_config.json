@@ -1,4 +1,5 @@
 {
+    "Browser_Type": "Chrome",
     "url":  "https://www.wjx.cn/vm/hIVIpS7.aspx",
     "ip_proxy": {"flag": false, "ip_num": 2},
     "wx_respond": 0,
@@ -170,3 +171,5 @@
       }
     ]
 }
+
+
