@@ -1,5 +1,4 @@
 {
-    "Browser_Type": "Chrome",
     "url":  "https://www.wjx.cn/vm/hIVIpS7.aspx",
     "ip_proxy": {"flag": false, "ip_num": 2},
     "wx_respond": 0,
@@ -10,7 +9,7 @@
       "qid": 1,
       "type": "单选题",
       "bili": [50,50],
-      "filling_option": {"option": 1, "fill_value": "没什么好填的"}
+      "filling_option": {"flag": true, "option": 1, "fill_value": "没什么好填的"}
       },
       {
         "qid": 2,
@@ -166,6 +165,28 @@
             {
                 "subkeys_qid": 3,
                 "bili": [20,20,20,20,20]
+            }
+        ]
+      },
+      {
+        "qid": 15,
+        "type": "多选矩阵题",
+        "subkeys": [
+            {
+                "subkeys_qid": 1,
+                "bili": [25,25,25,25]
+            },
+            {
+                "subkeys_qid": 2,
+                "bili": [25,25,25,25]
+            },
+            {
+                "subkeys_qid": 3,
+                "bili": [25,25,25,25]
+            },
+            {
+                "subkeys_qid": 4,
+                "bili": [25,25,25,25]
             }
         ]
       }

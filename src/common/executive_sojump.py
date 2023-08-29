@@ -1,7 +1,7 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          v1.3
+**    @version          v1.4
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
@@ -85,6 +85,10 @@ from src.common.DaiLiIp import DaiLiIP
     * v1.3
         * 面向过程的方式
         1、新增题型（矩阵滑块题、矩阵量表题、单选题选项附加填空）
+    * v1.4
+        * 面向过程的方式
+        1、新增题型（多选矩阵题）
+        2、修复单选题选项带填空的bug
 """
 
 
@@ -107,6 +111,7 @@ def get_ip(ip_num=json_data['ip_proxy']['ip_num']):
     Usage:
         [{'ip': '117.31.87.23', 'port': '43351'}]
     """
+    global ip,port
     if json_data['ip_proxy']['flag']:
         proxyPool = f'http://http.tiqu.alibabaapi.com/getip?num={ip_num}&type=1&pack=你的id&port=1&lb=1&pb=45&regions='
         ips = []
@@ -138,7 +143,6 @@ def driver():
         pass
     elif json_data['ip_proxy']['flag']:
         match = random.randint(0, len(_ips) - 1)
-        global ip, port
         ip = _ips[match]['ip']
         port = _ips[match]['port']
         option.add_argument(f'--proxy-server={ip}:{port}')
@@ -148,10 +152,9 @@ def driver():
             "user-agent=Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/89.0.4389.105 Mobile Safari/537.36 MicroMessenger/8.0.0.1841(0x2800005C) "
             "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN")
-    service = Service('../../python/chromedriver.exe')
-    driver = webdriver.Chrome(service=service, options=option)
+    driver = webdriver.Chrome(executable_path='../../python/chromedriver.exe', options=option)
     driver.maximize_window()
-    # driver.set_window_size(512, 1440)
+    driver.set_window_size(512, 1440)
     # driver.set_window_position(x, y)
     driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument',
                            {'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'})
@@ -169,8 +172,9 @@ def single_selection(qid: int, bili: list):
     options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-radio')
     index = danxuan(bili)
     options[index].click()
-    if index == itmes['filling_option']['option']:
-        get_element_by_css('.ui-radio div input.OtherRadioText').send_keys(itmes['filling_option']['fill_value'])
+    if itmes['filling_option']['flag']:
+        if index == itmes['filling_option']['option']:
+            get_element_by_css('.ui-radio div input.OtherRadioText').send_keys(itmes['filling_option']['fill_value'])
     print(f"第{qid}题【单选题】的比例分布为：{bili}")
 
 
@@ -186,6 +190,7 @@ def multiple_selection(qid: int, bili: list):
     while not flag:
         for count in range(len(bili)):
             if duoxuan(bili[count]):
+                time.sleep(0.3)
                 options[count].click()
                 flag = True
     print(f"第{qid}题【多选题】的比例分布为：{bili}")
@@ -252,6 +257,28 @@ def matrix_problem(qid: int):
         options[danxuan(subkeys_lists[index]['bili'])].click()
         print(
             f'第{str(qid)}-{subkeys_lists[index]["subkeys_qid"]}题【单选矩阵题】的比例分布为：{subkeys_lists[index]["bili"]}')
+
+
+def matrix_multiple(qid: int):
+    """
+    矩阵多选题执行函数
+    :param qid: 题号
+    :return:
+    """
+    matrix_options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, 'tbody tr[tp="d"]')
+    items = json_data['deploy']
+    subkeys_lists = items[qid - 1]['subkeys']
+    for index in range(len(subkeys_lists)):
+        options = matrix_options[index].find_elements(By.CSS_SELECTOR, 'td:not(.scalerowtitletd)')
+        flag = False
+        while not flag:
+            for count in range(len(subkeys_lists[index]['bili'])):
+                if duoxuan(subkeys_lists[index]['bili'][count]):
+                    options[count].click()
+                    flag = True
+        print(
+            f'第{str(qid)}-{subkeys_lists[index]["subkeys_qid"]}题【矩阵多选题】的比例分布为：{subkeys_lists[index]["bili"]}')
+
 
 
 def JMix(qid: int, bili: list):
@@ -482,8 +509,9 @@ def submit(s_time):
     time.sleep(s_time)
     click('//*[@id="ctlNext"]', 'xpath')
     errorMessage = get_element_by_css('.errorMessage').text
-    if errorMessage == "请选择选项":
+    if errorMessage == "请选择选项" or errorMessage == "请回答此题":
         print("提交失败，存在未选择的题，请检查...")
+        return
 
 
 # 封装元素定位
@@ -643,7 +671,7 @@ def handle_matrix_problem(item):  # 单选矩阵题
 
 
 def handle_matrix_multiSelect(item):  # 多选矩阵题
-    pass
+    matrix_multiple(item['qid'])
 
 
 def handle_single_scale(item):  # 单选量表题
@@ -703,7 +731,7 @@ def run():
         url_ = driver.current_url
         if 'https://www.wjx.cn/wjx/join/completemobile2.aspx?' in url_:
             count += 1
-            print(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！提交IP：{ip}:{port}")
+            print(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！")
             print("*" * 100)
             driver.get(json_data['url'])
         else:
