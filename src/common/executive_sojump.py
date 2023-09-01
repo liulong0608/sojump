@@ -1,7 +1,7 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          v1.4
+**    @version          alpha.1.5
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
@@ -12,6 +12,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 import json
 import math
+from datetime import datetime
+from queue import Queue
+import concurrent.futures
+import logging
+import multiprocessing
 import os
 import random
 import re
@@ -23,8 +28,6 @@ import requests
 from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
-
-from src.common.DaiLiIp import DaiLiIP
 
 """
 ## 重构问卷星脚本代码
@@ -89,7 +92,14 @@ from src.common.DaiLiIp import DaiLiIP
         * 面向过程的方式
         1、新增题型（多选矩阵题）
         2、修复单选题选项带填空的bug
+    * v1.5
+        * 面向过程的方式
+        1、重构代码逻辑，增加多线程方式执行(可指定线程数，建议最大三个线程，多了容易报错)
+        2、优化多级下拉框无法通用的问题
 """
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(process)d-%(threadName)s-%(asctime)s-%(levelname)s:%(message)s')
 
 
 # 读取JSON配置文件
@@ -111,7 +121,7 @@ def get_ip(ip_num=json_data['ip_proxy']['ip_num']):
     Usage:
         [{'ip': '117.31.87.23', 'port': '43351'}]
     """
-    global ip,port
+    global ip, port
     if json_data['ip_proxy']['flag']:
         proxyPool = f'http://http.tiqu.alibabaapi.com/getip?num={ip_num}&type=1&pack=你的id&port=1&lb=1&pb=45&regions='
         ips = []
@@ -133,7 +143,7 @@ def get_ip(ip_num=json_data['ip_proxy']['ip_num']):
 _ips = get_ip()
 
 
-def driver():
+def driver(x_axi, y_axi):
     option = webdriver.ChromeOptions()
     option.add_experimental_option('excludeSwitches', ['enable-automation'])
     option.add_experimental_option('useAutomationExtension', False)
@@ -152,40 +162,43 @@ def driver():
             "user-agent=Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/89.0.4389.105 Mobile Safari/537.36 MicroMessenger/8.0.0.1841(0x2800005C) "
             "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN")
-    driver = webdriver.Chrome(executable_path='../../python/chromedriver.exe', options=option)
-    driver.maximize_window()
+    service = Service(r'../../python/chromedriver.exe')
+    driver = webdriver.Chrome(service=service, options=option)
+    # driver.maximize_window()
     driver.set_window_size(512, 1440)
-    # driver.set_window_position(x, y)
+    driver.set_window_position(x_axi, y_axi)
     driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument',
                            {'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'})
     return driver
 
 
-def single_selection(qid: int, bili: list):
+def single_selection(driver, qid: int, bili: list):
     """
     单选题处理函数
+    :param driver: 浏览器
     :param qid: 题号
     :param bili: 比例
     :return:
     """
     itmes = json_data['deploy'][0]
-    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-radio')
+    options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-radio')
     index = danxuan(bili)
     options[index].click()
     if itmes['filling_option']['flag']:
         if index == itmes['filling_option']['option']:
-            get_element_by_css('.ui-radio div input.OtherRadioText').send_keys(itmes['filling_option']['fill_value'])
+            get_element_by_css(driver, '.ui-radio div input.OtherRadioText').send_keys(
+                itmes['filling_option']['fill_value'])
     print(f"第{qid}题【单选题】的比例分布为：{bili}")
 
 
-def multiple_selection(qid: int, bili: list):
+def multiple_selection(driver, qid: int, bili: list):
     """
     多选题处理函数
     :param qid: 题号
     :param bili: 比例
     :return:
     """
-    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-checkbox')
+    options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-checkbox')
     flag = False
     while not flag:
         for count in range(len(bili)):
@@ -196,9 +209,17 @@ def multiple_selection(qid: int, bili: list):
     print(f"第{qid}题【多选题】的比例分布为：{bili}")
 
 
-def select_options(qid, min_options, bili):
+def select_options(driver, qid, min_options, bili):
+    """
+    多选题处理函数-至少选择min_options个选项
+    :param driver: 浏览器
+    :param qid: 题号
+    :param min_options: 至少选择几项
+    :param bili: 题目选项选择比例
+    :return:
+    """
     temp_flag = 0
-    ops = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-checkbox')
+    ops = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-checkbox')
     while temp_flag < min_options:
         temp_answer = []
         for count in range(len(bili)):
@@ -214,42 +235,46 @@ def select_options(qid, min_options, bili):
     print(f"第{qid}题【多选题】（至少{min_options}个选项）的比例分布为：{bili}")
 
 
-def fill_in_the_blank(qid: int, bili: list, value: list):
+def fill_in_the_blank(driver, qid: int, bili: list, value: list):
     """
     填空题执行函数
+    :param driver: 浏览器
     :param qid: 题号
     :param bili: 比例
     :param value: 待填空的值
     :return:
     """
     fill_value = value[danxuan(bili)]
-    get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR, f'#q{qid}').send_keys(fill_value)
+    get_all_blocks(driver)[qid - 1].find_element(By.CSS_SELECTOR, f'#q{qid}').send_keys(fill_value)
     print(f'第{qid}题【填空题】的比例分布为：{bili}')
 
 
 # 下拉框执行函数
-def select_drop_down(qid: int, bili: list):
+def select_drop_down(driver, qid: int, bili: list):
     """
     下拉框执行函数
+    :param driver: 浏览器
     :param qid: 题号
     :param bili: 比例
     :return:
     """
-    get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR, '.select2-selection.select2-selection--single').click()
+    get_all_blocks(driver)[qid - 1].find_element(By.CSS_SELECTOR,
+                                                 '.select2-selection.select2-selection--single').click()
 
-    options = get_elements_by_css(f'#select2-q{qid}-results li')
+    options = get_elements_by_css(driver, f'#select2-q{qid}-results li')
     options = options[1:]  # 去掉第一个选项
     options[danxuan(bili)].click()
     print(f'第{qid}题【下拉框】的比例分布为：{bili}')
 
 
-def matrix_problem(qid: int):
+def matrix_problem(driver, qid: int):
     """
     单选矩阵题执行函数
+    :param driver: 浏览器
     :param qid:
     :return:
     """
-    matrix_options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, 'tbody tr[tp="d"]')
+    matrix_options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'tbody tr[tp="d"]')
     items = json_data['deploy']
     subkeys_lists = items[qid - 1]['subkeys']
     for index in range(len(subkeys_lists)):
@@ -259,13 +284,14 @@ def matrix_problem(qid: int):
             f'第{str(qid)}-{subkeys_lists[index]["subkeys_qid"]}题【单选矩阵题】的比例分布为：{subkeys_lists[index]["bili"]}')
 
 
-def matrix_multiple(qid: int):
+def matrix_multiple(driver, qid: int):
     """
     矩阵多选题执行函数
+    :param driver: 浏览器
     :param qid: 题号
     :return:
     """
-    matrix_options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, 'tbody tr[tp="d"]')
+    matrix_options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'tbody tr[tp="d"]')
     items = json_data['deploy']
     subkeys_lists = items[qid - 1]['subkeys']
     for index in range(len(subkeys_lists)):
@@ -280,15 +306,15 @@ def matrix_multiple(qid: int):
             f'第{str(qid)}-{subkeys_lists[index]["subkeys_qid"]}题【矩阵多选题】的比例分布为：{subkeys_lists[index]["bili"]}')
 
 
-
-def JMix(qid: int, bili: list):
+def JMix(driver, qid: int, bili: list):
     """
     排序题执行函数
+    :param driver: 浏览器
     :param qid:
     :param bili:
     :return:
     """
-    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, f"#div{qid} ul li")
+    options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, f"#div{qid} ul li")
 
     # 按照比例对选项进行排序
     # def map_list_to_indices(lst):
@@ -309,7 +335,7 @@ def JMix(qid: int, bili: list):
     #     return list(a)
     #
     # sorted_indices = map_list_to_indices(bili)
-    q_lists = get_elements_by_css(f'#div{qid} > ul > li')
+    q_lists = get_elements_by_css(driver, f'#div{qid} > ul > li')
     for index in bili:
         # driver.find_element(By.CSS_SELECTOR, f'#div{qid} > ul > li:nth-child({index+1})').click()
         q_lists[index - 1].click()
@@ -319,47 +345,50 @@ def JMix(qid: int, bili: list):
     # 因为按照指定的比例进行排序在vm网址不太好实现，对于排序题暂时只用随机排序random_JMix()方法
 
 
-def random_JMix(qid: int):
+def random_JMix(driver, qid: int):
     """
     排序题执行函数
-    :param qid:
+    :param driver: 浏览器
+    :param qid: 题号
     :return:
     """
-    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, f"#div{qid} ul li")
+    options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, f"#div{qid} ul li")
     for i in range(1, len(options) + 1):
         index = random.randint(i, len(options))
-        get_element_by_css(f'#div{qid} > ul > li:nth-child({index})').click()
+        get_element_by_css(driver, f'#div{qid} > ul > li:nth-child({index})').click()
         time.sleep(0.5)
     print(f'第{qid}题【排序题】的比例分布为：随机排序')
 
 
 # 单选量表题执行函数
-def single_scale(qid: int, bili: list):
+def single_scale(driver, qid: int, bili: list):
     """
     单选量表题执行函数
+    :param driver: 浏览器
     :param qid: 题号
     :param bili: 比例
     :return:
     """
-    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, 'ul[tp="d"] li')
+    options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'ul[tp="d"] li')
     options[danxuan(bili)].click()
     print(f'第{qid}题【单选量表题】的比例分布为：{bili}')
 
 
-def multilevel_pulldown_nonrandom(qid: int):
+def multilevel_pulldown_nonrandom(driver, qid: int):
     """
     多级下拉框执行函数-选项不随机
+    :param driver: 浏览器
     :param qid: 题号
     :return:
     """
-    get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR,
-                                           f"#div{qid} input#q{qid}").click()
+    get_all_blocks(driver)[qid - 1].find_element(By.CSS_SELECTOR,
+                                                 f"#div{qid} input#q{qid}").click()
     time.sleep(1)
     items = json_data['deploy']  # all question list
     subkeys_list = items[qid - 1]['subkeys']
     for index in range(len(subkeys_list)):
-        select_element = get_element_by_css(
-            f'#divFrameData div.ui-select:nth-child({subkeys_list[index]["subkeys_qid"]}) select')
+        select_element = get_element_by_css(driver,
+                                            f'#divFrameData div.ui-select:nth-child({subkeys_list[index]["subkeys_qid"]}) select')
         # time.sleep(1)
         if select_element:
             driver.execute_script(f"arguments[0].value='{subkeys_list[index]['value']}';",
@@ -368,12 +397,13 @@ def multilevel_pulldown_nonrandom(qid: int):
             time.sleep(0.5)
             print(
                 f"第{qid}题【多级下拉框】的第{subkeys_list[index]['subkeys_qid']}个select选择为：{subkeys_list[index]['value']}")
-    click(".layer_save_btn a")
+    click(driver, ".layer_save_btn a")
 
 
-def multilevel_pulldown_random(qid: int):
+def multilevel_pulldown_random(driver, qid: int):
     """
     多级下拉框执行函数-选项随机
+    :param driver: 浏览器
     :param qid: 题号
     :return:
     """
@@ -384,34 +414,35 @@ def multilevel_pulldown_random(qid: int):
         # 创建i个空列表
         options[f"options_{i}"] = []
     # options["options_1"]
-    get_all_blocks()[qid - 1].find_element(By.CSS_SELECTOR, f'#div{qid} input#q{qid}').click()
+    get_all_blocks(driver)[qid - 1].find_element(By.CSS_SELECTOR, f'#div{qid} input#q{qid}').click()
     time.sleep(1)
     # 获取有多少个select
-    select_list = get_elements_by_css(f'#divFrameData div.ui-select')
+    select_list = get_elements_by_css(driver, f'#divFrameData div.ui-select')
     # select_num = len(select_list)
+    select_elements = get_elements_by_css(driver, '#divFrameData .layer_content select')
     for index in range(list_num):
-        select_element = get_element_by_css(
-            f'#divFrameData div.ui-select:nth-child({index + 1}) select')
+        select_element = select_elements[index]
         # select_element = select_list[index]
         if select_element:
             options[f"options_{index + 1}"].append(select_element)
-            select_option(select_element, options[f"options_{index + 1}"])
+            select_option(driver, select_element, options[f"options_{index + 1}"])
             time.sleep(0.2)
             print(
                 f"第{qid}题【多级下拉框】的第{index + 1}个select选择为：随机选项")
     time.sleep(0.5)
-    click(".layer_save_btn a")
+    click(driver, ".layer_save_btn a")
 
 
-def multinomial_filling(qid: int):
+def multinomial_filling(driver, qid: int):
     """
     多项填空题执行函数
+    :param driver: 浏览器
     :param qid: 题号
     :return:
     """
     items = json_data['deploy']
     subkeys_list = items[qid - 1]['subkeys']
-    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, '.topictext span.textCont')
+    options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.topictext span.textCont')
     for index in range(len(subkeys_list)):
         fill_value = subkeys_list[index]['value'][danxuan(subkeys_list[index]['bili'])]
         options[index].send_keys(fill_value)
@@ -419,15 +450,16 @@ def multinomial_filling(qid: int):
             f'第{str(qid)}-{subkeys_list[index]["subkeys_qid"]}题【多项填空题】的比例分布为：{subkeys_list[index]["bili"]}')
 
 
-def matrix_filling(qid: int):
+def matrix_filling(driver, qid: int):
     """
     矩阵填空题执行函数
+    :param driver: 浏览器
     :param qid: 题号
     :return:
     """
     items = json_data['deploy']
     subkeys_list = items[qid - 1]['subkeys']
-    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, 'div.ui-input-text textarea')
+    options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'div.ui-input-text textarea')
     for index in range(len(subkeys_list)):
         fill_value = subkeys_list[index]['value'][danxuan(subkeys_list[index]['bili'])]
         options[index].send_keys(fill_value)
@@ -435,17 +467,18 @@ def matrix_filling(qid: int):
             f'第{str(qid)}-{subkeys_list[index]["subkeys_qid"]}题【矩阵填空题】的比例分布为：{subkeys_list[index]["bili"]}')
 
 
-def matrix_slider_problem(qid: int):
+def matrix_slider_problem(driver, qid: int):
     """
     矩阵滑块题执行函数
     :return:
     """
     items = json_data['deploy']
     subkeys_list = items[qid - 1]['subkeys']
-    options = get_all_blocks()[qid - 1].find_elements(By.CSS_SELECTOR, 'input.ui-slider-input')
+    options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'input.ui-slider-input')
     for index in range(len(subkeys_list)):
         if subkeys_list[index]['value_random']:
-            fill_value = random.randint(subkeys_list[index]['value_random']['min'], subkeys_list[index]['value_random']['max'])
+            fill_value = random.randint(subkeys_list[index]['value_random']['min'],
+                                        subkeys_list[index]['value_random']['max'])
             options[index].send_keys(fill_value)
         else:
             fill_value = subkeys_list[index]['value']
@@ -454,12 +487,12 @@ def matrix_slider_problem(qid: int):
             f'第{str(qid)}-{subkeys_list[index]["subkeys_qid"]}题【矩阵滑块题】的选项值为：{fill_value}')
 
 
-def get_all_blocks():
+def get_all_blocks(driver):
     """
     获取所有题块
     :return: 所有题块的元素
     """
-    return get_elements_by_css('.fieldset>div[class="field ui-field-contain"]')
+    return get_elements_by_css(driver, '.fieldset>div[class="field ui-field-contain"]')
 
 
 def danxuan(proportion):
@@ -500,22 +533,23 @@ def randomBili(num):
     return result
 
 
-def submit(s_time):
+def submit(driver, s_time):
     """
     提交执行函数
+    :param driver:
     :param s_time: 提交等待时间(秒)
     :return:
     """
     time.sleep(s_time)
-    click('//*[@id="ctlNext"]', 'xpath')
-    errorMessage = get_element_by_css('.errorMessage').text
+    click(driver, '//*[@id="ctlNext"]', 'xpath')
+    errorMessage = get_element_by_css(driver, '.errorMessage').text
     if errorMessage == "请选择选项" or errorMessage == "请回答此题":
         print("提交失败，存在未选择的题，请检查...")
         return
 
 
 # 封装元素定位
-def get_element_by_css(loc, timeout=10):
+def get_element_by_css(driver, loc, timeout=10):
     try:
         element = WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, loc))
@@ -526,7 +560,7 @@ def get_element_by_css(loc, timeout=10):
         return None
 
 
-def get_elements_by_css(loc, timeout=10):
+def get_elements_by_css(driver, loc, timeout=10):
     try:
         elements = WebDriverWait(driver, timeout).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, loc))
@@ -537,7 +571,7 @@ def get_elements_by_css(loc, timeout=10):
         return []
 
 
-def get_element_by_xpath(loc, timeout=10):
+def get_element_by_xpath(driver, loc, timeout=10):
     try:
         element = WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((By.XPATH, loc))
@@ -548,7 +582,7 @@ def get_element_by_xpath(loc, timeout=10):
         return None
 
 
-def get_elements_by_xpath(loc, timeout=10):
+def get_elements_by_xpath(driver, loc, timeout=10):
     try:
         elements = WebDriverWait(driver, timeout).until(
             EC.presence_of_all_elements_located((By.XPATH, loc))
@@ -559,7 +593,7 @@ def get_elements_by_xpath(loc, timeout=10):
         return []
 
 
-def click(loc, locator_type='css', timeout=10):
+def click(driver, loc, locator_type='css', timeout=10):
     try:
         if locator_type == 'id':
             element = WebDriverWait(driver, timeout).until(
@@ -587,7 +621,7 @@ def click(loc, locator_type='css', timeout=10):
         print(f"Failed to click element: {e}")
 
 
-def select_option(select_element, options):
+def select_option(driver, select_element, options):
     # 将下拉列表的元素放置在列表中
     options = [option.text for option in select_element.find_elements(By.CSS_SELECTOR, 'option')]
     options.pop(0)  # 排除第一个
@@ -597,11 +631,11 @@ def select_option(select_element, options):
 
 
 # 封装通过题块获取子题块
-def get_child_blocks(qid, loc):
-    return get_all_blocks()[qid].find_elements(By.CSS_SELECTOR, loc)
+def get_child_blocks(driver, qid, loc):
+    return get_all_blocks(driver)[qid].find_elements(By.CSS_SELECTOR, loc)
 
 
-def verify():
+def verify(driver):
     try:
         # 出现点击验证码验证
         time.sleep(1)
@@ -626,67 +660,67 @@ def verify():
         pass
 
 
-def handle_single_selection(item):  # 单选
-    single_selection(item['qid'], item['bili'])
+def handle_single_selection(driver, item):  # 单选
+    single_selection(driver, item['qid'], item['bili'])
 
 
-def handle_multiple_selection(item):  # 多选
-    multiple_selection(item['qid'], item['bili'])
+def handle_multiple_selection(driver, item):  # 多选
+    multiple_selection(driver, item['qid'], item['bili'])
 
 
-def handle_select_option(item):  # 多选-至少选择几项
-    select_options(item['qid'], item['min_options'], item['bili'])
+def handle_select_option(driver, item):  # 多选-至少选择几项
+    select_options(driver, item['qid'], item['min_options'], item['bili'])
 
 
-def handle_fill_blank(item):  # 填空
-    fill_in_the_blank(item['qid'], item['bili'], item['value'])
+def handle_fill_blank(driver, item):  # 填空
+    fill_in_the_blank(driver, item['qid'], item['bili'], item['value'])
 
 
-def handle_multinomial_filling(item):  # 多项填空
-    multinomial_filling(item['qid'])
+def handle_multinomial_filling(driver, item):  # 多项填空
+    multinomial_filling(driver, item['qid'])
 
 
-def handle_matrix_filling(item):  # 矩阵填空
-    matrix_filling(item['qid'])
+def handle_matrix_filling(driver, item):  # 矩阵填空
+    matrix_filling(driver, item['qid'])
 
 
-def handle_select_drop_down(item):  # 下拉框
-    select_drop_down(item['qid'], item['bili'])
+def handle_select_drop_down(driver, item):  # 下拉框
+    select_drop_down(driver, item['qid'], item['bili'])
 
 
-def handle_multilevel_pulldown_nonrandom(item):  # 多级下拉框-不随机
-    multilevel_pulldown_nonrandom(item['qid'])
+def handle_multilevel_pulldown_nonrandom(driver, item):  # 多级下拉框-不随机
+    multilevel_pulldown_nonrandom(driver, item['qid'])
 
 
-def handle_multilevel_pulldown_random(item):  # 多级下拉框-随机
-    multilevel_pulldown_random(item['qid'])
+def handle_multilevel_pulldown_random(driver, item):  # 多级下拉框-随机
+    multilevel_pulldown_random(driver, item['qid'])
 
 
-def handle_random_JM(item):  # 随机排序题  JMix
-    random_JMix(item['qid'])
+def handle_random_JM(driver, item):  # 随机排序题  JMix
+    random_JMix(driver, item['qid'])
 
 
-def handle_matrix_problem(item):  # 单选矩阵题
-    matrix_problem(item['qid'])
+def handle_matrix_problem(driver, item):  # 单选矩阵题
+    matrix_problem(driver, item['qid'])
 
 
-def handle_matrix_multiSelect(item):  # 多选矩阵题
-    matrix_multiple(item['qid'])
+def handle_matrix_multiSelect(driver, item):  # 多选矩阵题
+    matrix_multiple(driver, item['qid'])
 
 
-def handle_single_scale(item):  # 单选量表题
-    single_scale(item['qid'], item['bili'])
+def handle_single_scale(driver, item):  # 单选量表题
+    single_scale(driver, item['qid'], item['bili'])
 
 
-def handle_matrix_scale(item):  # 矩阵量表题
-    matrix_problem(item['qid'])
+def handle_matrix_scale(driver, item):  # 矩阵量表题
+    matrix_problem(driver, item['qid'])
 
 
-def handle_matrix_slider_problem(item):  # 矩阵滑块题
-    matrix_slider_problem(item['qid'])
+def handle_matrix_slider_problem(driver, item):  # 矩阵滑块题
+    matrix_slider_problem(driver, item['qid'])
 
 
-def main():
+def main(driver):
     handler_mapping = {
         '单选题': handle_single_selection,
         '多选题': handle_multiple_selection,
@@ -708,25 +742,26 @@ def main():
         item_type = item['type']
         handler = handler_mapping.get(item_type)
         if handler:
-            handler(item)
+            handler(driver=driver, item=item)
         else:
             print(f"Unsupported item type:{item_type}")
     # 提交
     time.sleep(1)
     if json_data['submit_random_time']['flag']:
-        submit(random.randint(json_data['submit_random_time']['min'], json_data['submit_random_time']['max']))
+        submit(driver, random.randint(json_data['submit_random_time']['min'], json_data['submit_random_time']['max']))
     else:
-        submit(json_data['submit_time'])  # 等待设定的秒数后提交
-    verify()
+        submit(driver, json_data['submit_time'])  # 等待设定的秒数后提交
+    verify(driver)
 
 
-def run():
+def run(driver, x_axi, y_axi):
+    driver = driver(x_axi, y_axi)
     while True:
         global count
         driver.delete_all_cookies()
         driver.get(json_data['url'])
         time.sleep(2)
-        main()
+        main(driver)
         time.sleep(4)
         url_ = driver.current_url
         if 'https://www.wjx.cn/wjx/join/completemobile2.aspx?' in url_:
@@ -739,7 +774,13 @@ def run():
             return "提交时遇到错误，程序终止."
 
 
+def thread_group(thread_count):
+    for i in range(thread_count+1):
+        x_axi = i * 512
+        t = threading.Thread(target=run, args=(driver, x_axi, 0))
+        t.start()
+
+
 if __name__ == '__main__':
     count = 0  # 初始提交份数
-    driver = driver()
-    run()
+    thread_group(json_data['thread_count'])

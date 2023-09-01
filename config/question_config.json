@@ -1,6 +1,7 @@
 {
     "url":  "https://www.wjx.cn/vm/hIVIpS7.aspx",
     "ip_proxy": {"flag": false, "ip_num": 2},
+    "thread_count": 3,
     "wx_respond": 0,
     "submit_time": 2,
     "submit_random_time": {"flag": true, "min": 1, "max": 5},
@@ -110,7 +111,7 @@
       {
         "qid": 11,
         "type": "多级下拉题-随机",
-        "Drop-downNumber": 4,
+        "Drop-downNumber": 3,
         "property": "随机"
       },
       {
