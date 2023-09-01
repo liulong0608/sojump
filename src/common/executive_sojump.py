@@ -775,7 +775,7 @@ def run(driver, x_axi, y_axi):
 
 
 def thread_group(thread_count):
-    for i in range(thread_count+1):
+    for i in range(thread_count):
         x_axi = i * 512
         t = threading.Thread(target=run, args=(driver, x_axi, 0))
         t.start()
