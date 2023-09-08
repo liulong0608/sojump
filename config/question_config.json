@@ -1,8 +1,8 @@
 {
     "url":  "https://www.wjx.cn/vm/hIVIpS7.aspx",
-    "ip_proxy": {"flag": false, "ip_num": 2},
+    "ip_proxy": {"flag": false, "ip_num": 3},
     "thread_count": 3,
-    "wx_respond": 0,
+    "wx_respond": 1,
     "submit_time": 2,
     "submit_random_time": {"flag": true, "min": 1, "max": 5},
     "deploy": [

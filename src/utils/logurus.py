@@ -21,8 +21,8 @@ class LoguruLogger:
         # 清空所有设置
         self.logger.remove()
         if stream == 1:
-            # 添加控制台输出的格式,sys.stdout为输出到屏幕;关于这些配置还需要自定义请移步官网查看相关参数说明
-            self.logger.add(sys.stdout, level='DEBUG',
+            # 添加控制台输出的格式,sys.stdout为输出到屏幕
+            self.logger.add(sys.stdout, level='DEBUG', enqueue=True, backtrace=True, diagnose=True,
                             format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "  # 颜色>时间
                                    "{process.name} | "  # 进程名
                                    "{thread.name} | "  # 进程名
@@ -32,7 +32,7 @@ class LoguruLogger:
                                    "<level>{message}</level>",  # 日志内容
                             )
         # 输出到文件的格式,注释下面的add',则关闭日志写入
-        self.logger.add(log_file_path, level='DEBUG',
+        self.logger.add(log_file_path, level='DEBUG', enqueue=True,
                         format='{time:YYYY-MM-DD HH:mm:ss} - '  # 时间
                                "{process.name} | "  # 进程名
                                "{thread.name} | "  # 进程名
