@@ -102,6 +102,7 @@ from selenium.webdriver.common.by import By
     * v1.7
         * 面向过程的方式
         1、优化代码执行速度，降低错误率
+        2、将代理ip地址提取到配置文件中
 """
 
 log = LoguruLogger("sojump.log", stream=1).get_logger()
@@ -124,10 +125,9 @@ def readJsonConfig(file=globalparam.question_config_path):
 json_data = readJsonConfig()
 
 
-def get_ip(ip_num=json_data['ip_proxy']['ip_num']):
+def get_ip():
     """
     通过api获取代理ip,获取指定ip个数
-    :param ip_num: ip个数
     :return: List
 
     Usage:
@@ -135,11 +135,8 @@ def get_ip(ip_num=json_data['ip_proxy']['ip_num']):
     """
     global ip, port
     try:
-        if ip_num is None:
-            ip_num = json_data['ip_proxy']['ip_num']
-
         if json_data['ip_proxy']['flag']:
-            proxyPool = f'http://http.tiqu.alibabaapi.com/getip?num={ip_num}&type=1&pack=&port=1&lb=1&pb=45&regions='
+            proxyPool = json_data['ip_proxy']['porxy_url']
             ips = []
             ip_port = requests.get(proxyPool).text
             pools = re.findall(r"(\d+\.\d+\.\d+\.\d+):(\d+)", ip_port)

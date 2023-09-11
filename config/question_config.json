@@ -1,7 +1,7 @@
 {
     "url":  "https://www.wjx.cn/vm/hIVIpS7.aspx",
-    "ip_proxy": {"flag": false, "ip_num": 3},
-    "thread_count": 3,
+    "ip_proxy": {"flag": false, "porxy_url": "提取ip的API地址"},
+    "thread_count": 2,
     "wx_respond": 1,
     "submit_time": 2,
     "submit_random_time": {"flag": true, "min": 1, "max": 5},
