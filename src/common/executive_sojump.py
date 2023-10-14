@@ -1,7 +1,7 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          alpha.1.7
+**    @version          alpha.1.1.8
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
@@ -103,9 +103,17 @@ from selenium.webdriver.common.by import By
         * 面向过程的方式
         1、优化代码执行速度，降低错误率
         2、将代理ip地址提取到配置文件中
+    * alpha.1.1.8
+        * 面向过程的方式
+        1、优化随机下拉题执行函数，增加异常处理机制
+        2、优化ip代理代码（目前使用ip代理只能使用一个线程，其余情况默认使用两个线程）
 """
 
 log = LoguruLogger("sojump.log", stream=1).get_logger()
+
+
+def set_thread_count(THREAD_COUNT=2):  # 设置线程数量默认为2个
+    return THREAD_COUNT
 
 
 # 读取JSON配置文件
@@ -133,7 +141,6 @@ def get_ip():
     Usage:
         [{'ip': '117.31.87.23', 'port': '43351'}]
     """
-    global ip, port
     try:
         if json_data['ip_proxy']['flag']:
             proxyPool = json_data['ip_proxy']['porxy_url']
@@ -143,11 +150,11 @@ def get_ip():
             for pool in pools:
                 ip = pool[0]
                 port = pool[1]
-                dict = {
+                _dict = {
                     "ip": ip,
                     "port": port
                 }
-                ips.append(dict)
+                ips.append(_dict)
             log.info(f"提取到ip：{ips}")
             return ips
     except Exception as e:
@@ -155,22 +162,23 @@ def get_ip():
     return '本地IP'
 
 
-def driver(x_axi, y_axi):
-    _ips = get_ip()
+def new_driver(x_axi, y_axi):
     option = webdriver.ChromeOptions()
     option.add_experimental_option('excludeSwitches', ['enable-automation'])
     option.add_experimental_option('useAutomationExtension', False)
     # 随机获取某个代理值
     if not json_data['ip_proxy']['flag']:
-        # 如果配置的0，则不需要ip代理
+        # 如果配置的flag为False，则不需要ip代理
         pass
     elif json_data['ip_proxy']['flag']:
+        # 如果配置的flag为True，需要ip代理，并且只能使用一个线程
         try:
+            _ips = get_ip()
             match = random.randint(0, len(_ips) - 1)
             ip = _ips[match]['ip']
             port = _ips[match]['port']
             option.add_argument(f'--proxy-server={ip}:{port}')
-        except:
+        except Exception as e:
             log.error(f"Error occurred while getting IP.")
 
     if json_data['wx_respond'] == 1:
@@ -197,7 +205,7 @@ def single_selection(driver, qid: int, bili: list):
     :param bili: 比例
     :return:
     """
-    itmes = json_data['deploy'][qid-1]
+    itmes = json_data['deploy'][qid - 1]
     log.info(f"第{qid}题配置参数：{itmes}")
     options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-radio')
     index = danxuan(bili)
@@ -218,7 +226,7 @@ def multiple_selection(driver, qid: int, bili: list):
     :param bili: 比例
     :return:
     """
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-checkbox')
     flag = False
     while not flag:
@@ -239,7 +247,7 @@ def select_options(driver, qid, min_options, bili):
     :param bili: 题目选项选择比例
     :return:
     """
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     temp_flag = 0
     ops = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-checkbox')
     while temp_flag < min_options:
@@ -267,7 +275,7 @@ def fill_in_the_blank(driver, qid: int, bili: list, value: list):
     :param value: 待填空的值
     :return:
     """
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     fill_value = value[danxuan(bili)]
     time.sleep(0.3)
     get_all_blocks(driver)[qid - 1].find_element(By.CSS_SELECTOR, f'#q{qid}').send_keys(fill_value)
@@ -283,7 +291,7 @@ def select_drop_down(driver, qid: int, bili: list):
     :param bili: 比例
     :return:
     """
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     get_all_blocks(driver)[qid - 1].find_element(By.CSS_SELECTOR,
                                                  '.select2-selection.select2-selection--single').click()
     options = get_elements_by_css(driver, f'#select2-q{qid}-results li')
@@ -300,7 +308,7 @@ def matrix_problem(driver, qid: int):
     :param qid:
     :return:
     """
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     matrix_options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'tbody tr[tp="d"]')
     items = json_data['deploy']
     subkeys_lists = items[qid - 1]['subkeys']
@@ -319,7 +327,7 @@ def matrix_multiple(driver, qid: int):
     :param qid: 题号
     :return:
     """
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     matrix_options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'tbody tr[tp="d"]')
     items = json_data['deploy']
     subkeys_lists = items[qid - 1]['subkeys']
@@ -344,7 +352,7 @@ def JMix(driver, qid: int, bili: list):
     :param bili:
     :return:
     """
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     # options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, f"#div{qid} ul li")
     # 按照比例对选项进行排序
     # def map_list_to_indices(lst):
@@ -382,7 +390,7 @@ def random_JMix(driver, qid: int):
     :param qid: 题号
     :return:
     """
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, f"#div{qid} ul li")
     for i in range(1, len(options) + 1):
         index = random.randint(i, len(options))
@@ -400,7 +408,7 @@ def single_scale(driver, qid: int, bili: list):
     :param bili: 比例
     :return:
     """
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'ul[tp="d"] li')
     time.sleep(0.3)
     options[danxuan(bili)].click()
@@ -414,7 +422,7 @@ def multilevel_pulldown_nonrandom(driver, qid: int):
     :param qid: 题号
     :return:
     """
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     time.sleep(0.3)
     get_all_blocks(driver)[qid - 1].find_element(By.CSS_SELECTOR,
                                                  f"#div{qid} input#q{qid}").click()
@@ -444,7 +452,7 @@ def multilevel_pulldown_random(driver, qid: int):
     :return:
     """
     items = json_data['deploy']
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     list_num = items[qid - 1]['Drop-downNumber']
     options = {}
     for i in range(1, int(list_num) + 1):
@@ -458,7 +466,7 @@ def multilevel_pulldown_random(driver, qid: int):
     # select_num = len(select_list)
     select_elements = get_elements_by_css(driver, '#divFrameData .layer_content select')
     for index in range(1, int(list_num) + 1):
-        select_element = select_elements[index-1]
+        select_element = select_elements[index - 1]
         # select_element = select_list[index]
         if select_element:
             options[f"options_{index}"].append(select_element)
@@ -478,7 +486,7 @@ def multinomial_filling(driver, qid: int):
     :return:
     """
     items = json_data['deploy']
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     subkeys_list = items[qid - 1]['subkeys']
     options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.topictext span.textCont')
     for index in range(len(subkeys_list)):
@@ -497,7 +505,7 @@ def matrix_filling(driver, qid: int):
     :return:
     """
     items = json_data['deploy']
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     subkeys_list = items[qid - 1]['subkeys']
     options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'div.ui-input-text textarea')
     for index in range(len(subkeys_list)):
@@ -514,7 +522,7 @@ def matrix_slider_problem(driver, qid: int):
     :return:
     """
     items = json_data['deploy']
-    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid-1]}")
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     subkeys_list = items[qid - 1]['subkeys']
     options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'input.ui-slider-input')
     for index in range(len(subkeys_list)):
@@ -670,18 +678,25 @@ def click(driver, loc, locator_type='css', timeout=10):
 
 
 def select_option(driver, select_element, options):
-    # 将下拉列表的元素放置在列表中
-    options = [option.text for option in select_element.find_elements(By.CSS_SELECTOR, 'option')]
-    if not options:
-        log.error(f"Error: options list is empty.options: {options}")
-        return
-    if len(options) == 0:
-        log.error(f"Error: options list is empty.options: {options}")
-        return
-    options.pop(0)  # 排除第一个
-    selected_option = random.choice(options)
-    driver.execute_script(f"arguments[0].value='{selected_option}';", select_element)
-    driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", select_element)
+    try:
+        # 等待元素可见
+        wait = WebDriverWait(driver, 30)
+        options_visible = EC.visibility_of_element_located((By.CSS_SELECTOR, 'option'))
+        wait.until(options_visible)
+        # 获取选项元素列表
+        options = [option.text for option in select_element.find_elements(By.CSS_SELECTOR, 'option')]
+        if len(options) > 0:
+            options.pop(0)  # 排除第一个
+            selected_option = random.choice(options)
+            driver.execute_script(f"arguments[0].value='{selected_option}';", select_element)
+            driver.execute_script("arguments[0].dispatchEvent(new Event('change'));", select_element)
+        else:
+            log.error("No options found in select element")
+            return
+    except IndexError:
+        log.error("select_option failed: options list index out of range")
+    except Exception as e:
+        log.error(f"Error selecting random option: {e}")
 
 
 # 封装通过题块获取子题块
@@ -809,12 +824,12 @@ def main(driver):
     verify(driver)
 
 
-def run(driver, x_axi, y_axi):
-    driver = driver(x_axi, y_axi)
+def run(x_axi, y_axi):
     while True:
         global count
-        driver.delete_all_cookies()
+        driver = new_driver(x_axi, y_axi)
         driver.get(json_data['url'])
+        driver.delete_all_cookies()
         time.sleep(2)
         main(driver)
         time.sleep(4)
@@ -823,7 +838,8 @@ def run(driver, x_axi, y_axi):
             count += 1
             log.success(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！")
             log.info("*" * 100)
-            driver.get(json_data['url'])
+            if json_data['ip_proxy']['flag']:
+                driver.quit()
         else:
             time.sleep(2)
             return "提交时遇到错误，程序终止."
@@ -832,10 +848,13 @@ def run(driver, x_axi, y_axi):
 def thread_group(thread_count):
     for i in range(thread_count):
         x_axi = i * 512
-        t = threading.Thread(target=run, args=(driver, x_axi, 0))
+        t = threading.Thread(target=run, args=(x_axi, 0))
         t.start()
 
 
 if __name__ == '__main__':
     count = 0  # 初始提交份数
-    thread_group(json_data['thread_count'])
+    THREAD_COUNT = 2
+    if json_data['ip_proxy']['flag']:
+        THREAD_COUNT = 1
+    thread_group(THREAD_COUNT)
