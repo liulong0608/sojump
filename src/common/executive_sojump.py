@@ -1,7 +1,7 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          alpha.1.1.8
+**    @version          alpha.1.1.9
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
@@ -107,6 +107,9 @@ from selenium.webdriver.common.by import By
         * 面向过程的方式
         1、优化随机下拉题执行函数，增加异常处理机制
         2、优化ip代理代码（目前使用ip代理只能使用一个线程，其余情况默认使用两个线程）
+    * alpha.1.1.9
+        * 面向过程的方式
+        1、新增随机比例设置（题型配置文件中将“bili”：“randomBili(选项个数)”）
 """
 
 log = LoguruLogger("sojump.log", stream=1).get_logger()
@@ -114,6 +117,24 @@ log = LoguruLogger("sojump.log", stream=1).get_logger()
 
 def set_thread_count(THREAD_COUNT=2):  # 设置线程数量默认为2个
     return THREAD_COUNT
+
+
+def _eval(func_str):
+    if type(func_str) == str and func_str.startswith('randomBili'):
+        return eval(func_str)
+    else:
+        return func_str
+
+
+def randomBili(num):
+    a = 100 // num
+    yu = 100 - a * num
+    result = []
+    for i in range(num):
+        result.append(a)
+    for i in range(yu):
+        result[i] += 1
+    return result
 
 
 # 读取JSON配置文件
@@ -208,7 +229,7 @@ def single_selection(driver, qid: int, bili: list):
     itmes = json_data['deploy'][qid - 1]
     log.info(f"第{qid}题配置参数：{itmes}")
     options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-radio')
-    index = danxuan(bili)
+    index = danxuan(_eval(bili))
     time.sleep(0.3)
     options[index].click()
     if itmes['filling_option']['flag']:
@@ -230,8 +251,8 @@ def multiple_selection(driver, qid: int, bili: list):
     options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-checkbox')
     flag = False
     while not flag:
-        for count in range(len(bili)):
-            if duoxuan(bili[count]):
+        for count in range(len(_eval(bili))):
+            if duoxuan(_eval(bili)[count]):
                 options[count].click()
                 time.sleep(0.5)
                 flag = True
@@ -252,13 +273,13 @@ def select_options(driver, qid, min_options, bili):
     ops = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-checkbox')
     while temp_flag < min_options:
         temp_answer = []
-        for count in range(len(bili)):
-            if duoxuan(bili[count]):
+        for count in range(len(_eval(bili))):
+            if duoxuan(_eval(bili)[count]):
                 temp_answer.append(count)
                 temp_flag += 1
-            if count == len(bili) - 1 and temp_flag < min_options:
+            if count == len(_eval(bili)) - 1 and temp_flag < min_options:
                 temp_flag = 0
-            elif count == len(bili) - 1 and temp_flag >= min_options:
+            elif count == len(_eval(bili)) - 1 and temp_flag >= min_options:
                 for count in range(len(temp_answer)):
                     # ops列表，包含了需要点击的元素
                     ops[temp_answer[count]].click()
@@ -266,7 +287,7 @@ def select_options(driver, qid, min_options, bili):
     log.success(f"第{qid}题【多选题】（至少{min_options}个选项）完成！比例分布为：{bili}")
 
 
-def fill_in_the_blank(driver, qid: int, bili: list, value: list):
+def fill_in_the_blank(driver, qid: int, bili, value: list):
     """
     填空题执行函数
     :param driver: 浏览器
@@ -276,7 +297,7 @@ def fill_in_the_blank(driver, qid: int, bili: list, value: list):
     :return:
     """
     log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
-    fill_value = value[danxuan(bili)]
+    fill_value = value[danxuan(_eval(bili))]
     time.sleep(0.3)
     get_all_blocks(driver)[qid - 1].find_element(By.CSS_SELECTOR, f'#q{qid}').send_keys(fill_value)
     log.success(f'第{qid}题【填空题】完成！比例分布为：{bili}')
@@ -297,7 +318,7 @@ def select_drop_down(driver, qid: int, bili: list):
     options = get_elements_by_css(driver, f'#select2-q{qid}-results li')
     options = options[1:]  # 去掉第一个选项
     time.sleep(0.3)
-    options[danxuan(bili)].click()
+    options[danxuan(_eval(bili))].click()
     log.success(f'第{qid}题【下拉框】完成！比例分布为：{bili}')
 
 
@@ -335,8 +356,8 @@ def matrix_multiple(driver, qid: int):
         options = matrix_options[index].find_elements(By.CSS_SELECTOR, 'td:not(.scalerowtitletd)')
         flag = False
         while not flag:
-            for count in range(len(subkeys_lists[index]['bili'])):
-                if duoxuan(subkeys_lists[index]['bili'][count]):
+            for count in range(len(_eval(subkeys_lists[index]['bili']))):
+                if duoxuan(_eval(subkeys_lists[index]['bili'])[count]):
                     options[count].click()
                     time.sleep(0.5)
                     flag = True
@@ -411,7 +432,7 @@ def single_scale(driver, qid: int, bili: list):
     log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
     options = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, 'ul[tp="d"] li')
     time.sleep(0.3)
-    options[danxuan(bili)].click()
+    options[danxuan(_eval(bili))].click()
     log.success(f'第{qid}题【单选量表题】完成！比例分布为：{bili}')
 
 
@@ -575,17 +596,6 @@ def duoxuan(probability):
     if i <= probability:
         flag = True
     return flag
-
-
-def randomBili(num):
-    a = 100 // num
-    yu = 100 - a * num
-    result = []
-    for i in range(num):
-        result.append(a)
-    for i in range(yu):
-        result[i] += 1
-    return result
 
 
 def submit(driver, s_time):

@@ -8,7 +8,7 @@
       {
       "qid": 1,
       "type": "单选题",
-      "bili": [50,50],
+      "bili": "randomBili(2)",
       "filling_option": {"flag": true, "option": 1, "fill_value": "没什么好填的"}
       },
       {
