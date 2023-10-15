@@ -840,11 +840,12 @@ def run(x_axi, y_axi):
         driver = new_driver(x_axi, y_axi)
         driver.get(json_data['url'])
         driver.delete_all_cookies()
+        before_url = driver.current_url
         time.sleep(2)
         main(driver)
         time.sleep(4)
-        url_ = driver.current_url
-        if 'https://www.wjx.cn/wjx/join/completemobile2.aspx?' in url_:
+        later_url = driver.current_url   # 获取提交后的网址
+        if before_url != later_url:
             count += 1
             log.success(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！")
             log.info("*" * 100)
