@@ -12,7 +12,7 @@ import os
 config_file_path = os.path.split(os.path.realpath(__file__))[0] + '\\'  # D:\Sojump\config
 
 # 题型配置文件路径
-question_config_path = config_file_path + '题型配置.json'
+question_config_path = config_file_path + 'question_config.json'
 
 # 浏览器驱动路径
 driver_path = '../python/chromedriver.exe'

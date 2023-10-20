@@ -41,3 +41,4 @@ class LoguruLogger:
 
     def get_logger(self):
         return self.logger
+    

@@ -1,23 +1,18 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          alpha.1.1.9
+**    @version          alpha.1.2.0
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
 """
+from selenium.common import WebDriverException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 import json
 import math
-from datetime import datetime
-from queue import Queue
-import concurrent.futures
-import logging
-import multiprocessing
-import os
 import random
 import re
 import time
@@ -30,86 +25,9 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 
 """
-## 重构问卷星脚本代码
-    * v0.1
-        * 面向过程的方式
-        1、先写配置读取JSON配置文件
-        2、循环遍历JSON题型（判断题型，执行该题型的执行函数）
-            1. v0.1版本完善了单选、多选、填空的执行函数
-    * v0.2
-        * 面向过程的方式
-        1、增加代理ip
-    * v0.3
-        * 面向过程的方式
-        1、增加题型（下拉框、多选题（至少选择几项））
-    * v0.4
-        * 面向过程的方式
-        1、增加题型（单选矩形题）
-    * v0.5
-        * 面向过程的方式
-        1、增加题型（排序题（随机排序））
-        2、优化验证函数和提交函数
-    * v0.6
-        * 面向过程的方式
-        1、优化获取页面元素的函数
-    * v0.7
-        * 面向过程的方式
-        1、增加题型（单选量表题）    
-    * v0.8
-        * 面向过程的方式
-        1、增加题型（多级下拉题-随机、多级下拉题-不随机）
-    * v0.8.2
-        * 面向过程的方式
-        1、完善多级下拉题-不随机
-        2、增加清除cookie缓存机制
-    * v0.9
-        * 面向过程的方式
-        1、增加题型（多项填空）
-    * v1.0
-        * 面向过程的方式
-        1、优化单选矩阵题执行函数的逻辑
-        2、优化多级下拉题执行函数
-        3、优化元素定位增加显式等待，异常处理
-        4、优化多选填空题执行函数
-        5、优化提交函数，增加提交等待时间
-        6、优化判断题型执行相关题型函数逻辑
-        7、优化(多级下拉框执行函数-选项随机)执行函数的逻辑
-        8、增加多线程方式执行脚本（todo）
-    * v1.1
-        * 面向过程的方式
-        1、优化多级下拉框题执行速度
-        2、新增题型（矩阵填空题）
-        3、暂时关闭多线程执行方式
-    * v1.2
-        * 面向过程的方式
-        1、修复一些问题
-        2、通过读取配置文件决定提交时间，是否修改userAgent
-        3、回滚到多线程之前的版本
-    * v1.3
-        * 面向过程的方式
-        1、新增题型（矩阵滑块题、矩阵量表题、单选题选项附加填空）
-    * v1.4
-        * 面向过程的方式
-        1、新增题型（多选矩阵题）
-        2、修复单选题选项带填空的bug
-    * v1.5
-        * 面向过程的方式
-        1、重构代码逻辑，增加多线程方式执行(可指定线程数，建议最大三个线程，多了容易报错)
-        2、优化多级下拉框无法通用的问题
-    * v1.6
-        * 面向过程的方式
-        1、新增日志监控
-    * v1.7
-        * 面向过程的方式
-        1、优化代码执行速度，降低错误率
-        2、将代理ip地址提取到配置文件中
-    * alpha.1.1.8
-        * 面向过程的方式
-        1、优化随机下拉题执行函数，增加异常处理机制
-        2、优化ip代理代码（目前使用ip代理只能使用一个线程，其余情况默认使用两个线程）
-    * alpha.1.1.9
-        * 面向过程的方式
-        1、新增随机比例设置（题型配置文件中将“bili”：“randomBili(选项个数)”）
+Python version： 3.10.9
+Chrome version： 118.0.5993.89
+chromedriver version： 118.0.5993.88
 """
 
 log = LoguruLogger("sojump.log", stream=1).get_logger()
@@ -208,7 +126,10 @@ def new_driver(x_axi, y_axi):
             "user-agent=Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/89.0.4389.105 Mobile Safari/537.36 MicroMessenger/8.0.0.1841(0x2800005C) "
             "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN")
-    service = Service(r'../../python/chromedriver.exe')
+    try:
+        service = Service(r"C:\python\chromedriver.exe")
+    except Exception as e:
+        log.error(f"未找到‘C:\\python\\chromedriver.exe’路径下的浏览器驱动！{str(e)}")
     driver = webdriver.Chrome(service=service, options=option)
     # driver.maximize_window()
     driver.set_window_size(512, 1440)
@@ -491,6 +412,7 @@ def multilevel_pulldown_random(driver, qid: int):
         # select_element = select_list[index]
         if select_element:
             options[f"options_{index}"].append(select_element)
+            time.sleep(3)
             select_option(driver, select_element, options[f"options_{index}"])
             time.sleep(1)
             log.success(
@@ -687,7 +609,7 @@ def click(driver, loc, locator_type='css', timeout=10):
         log.error(f"Failed to click element: {e}")
 
 
-def select_option(driver, select_element, options):
+def select_option(driver, select_element, options_lsit):
     try:
         # 等待元素可见
         wait = WebDriverWait(driver, 30)
@@ -800,60 +722,99 @@ def handle_matrix_slider_problem(driver, item):  # 矩阵滑块题
 
 
 def main(driver):
-    handler_mapping = {
-        '单选题': handle_single_selection,
-        '多选题': handle_multiple_selection,
-        '多选题-至少选择几项': handle_select_option,
-        '填空题': handle_fill_blank,
-        '多项填空题': handle_multinomial_filling,
-        '矩阵填空题': handle_matrix_filling,
-        '下拉题': handle_select_drop_down,
-        '多级下拉题-不随机': handle_multilevel_pulldown_nonrandom,
-        '多级下拉题-随机': handle_multilevel_pulldown_random,
-        '排序题': handle_random_JM,
-        '单选矩阵题': handle_matrix_problem,
-        '多选矩阵题': handle_matrix_multiSelect,
-        '单选量表题': handle_single_scale,
-        '矩阵量表题': handle_matrix_scale,
-        '矩阵滑块题': handle_matrix_slider_problem
-    }
-    for item in json_data['deploy']:
-        item_type = item['type']
-        handler = handler_mapping.get(item_type)
-        if handler:
-            handler(driver=driver, item=item)
+    deploy = json_data['deploy']
+    div_questions = get_element_by_xpath(driver, '//*[@id="divQuestion"]')
+    page_dict = {}
+    # 获取页数
+    page_fieldsets = div_questions.find_elements(By.CSS_SELECTOR, 'fieldset[pg]')
+    page_num = len(page_fieldsets)
+    # 获取每页题目数量
+    for fieldset in page_fieldsets:
+        pg = fieldset.get_attribute('pg')
+        div_count = len(fieldset.find_elements(By.CSS_SELECTOR, 'div[class="field ui-field-contain"]'))
+        page_dict[pg] = div_count
+    sept_list = [int(value) for value in page_dict.values()]
+    index = 0
+    for i in range(page_num):
+        for j in range(sept_list[i]):
+            item = deploy[index]
+            if item['type'] == '单选题':
+                handle_single_selection(driver, item)
+            elif item['type'] == '多选题':
+                handle_multiple_selection(driver, item)
+            elif item['type'] == '多选题-至少选择几项':
+                handle_select_option(driver, item)
+            elif item['type'] == '填空题':
+                handle_fill_blank(driver, item)
+            elif item['type'] == '多项填空题':
+                handle_multinomial_filling(driver, item)
+            elif item['type'] == '矩阵填空题':
+                handle_matrix_filling(driver, item)
+            elif item['type'] == '下拉题':
+                handle_select_drop_down(driver, item)
+            elif item['type'] == '多级下拉题-不随机':
+                handle_multilevel_pulldown_nonrandom(driver, item)
+            elif item['type'] == '多级下拉题-随机':
+                handle_multilevel_pulldown_random(driver, item)
+            elif item['type'] == '排序题':
+                handle_random_JM(driver, item)
+            elif item['type'] == '单选矩阵题':
+                handle_matrix_problem(driver, item)
+            elif item['type'] == '多选矩阵题':
+                handle_matrix_multiSelect(driver, item)
+            elif item['type'] == '单选量表题':
+                handle_single_scale(driver, item)
+            elif item['type'] == '矩阵量表题':
+                handle_matrix_scale(driver, item)
+            elif item['type'] == '矩阵滑块题':
+                handle_matrix_slider_problem(driver, item)
+            if index >= len(deploy):
+                break
+            index += 1
+        if i < page_num - 1:
+            click(driver, 'div#divNext a')
             time.sleep(1)
         else:
-            log.error(f"Unsupported item type:{item_type}")
-    # 提交
-    time.sleep(1)
-    if json_data['submit_random_time']['flag']:
-        submit(driver, random.randint(json_data['submit_random_time']['min'], json_data['submit_random_time']['max']))
-    else:
-        submit(driver, json_data['submit_time'])  # 等待设定的秒数后提交
-    verify(driver)
+            # 提交
+            time.sleep(1)
+            if json_data['submit_random_time']['flag']:
+                submit(driver, random.randint(json_data['submit_random_time']['min'],
+                                              json_data['submit_random_time']['max']))
+            else:
+                submit(driver, json_data['submit_time'])  # 等待设定的秒数后提交
+            verify(driver)
 
 
 def run(x_axi, y_axi):
+    driver = new_driver(x_axi, y_axi)
     while True:
-        global count
-        driver = new_driver(x_axi, y_axi)
-        driver.get(json_data['url'])
-        driver.delete_all_cookies()
-        before_url = driver.current_url
-        time.sleep(2)
-        main(driver)
-        time.sleep(4)
-        later_url = driver.current_url   # 获取提交后的网址
-        if before_url != later_url:
-            count += 1
-            log.success(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！")
-            log.info("*" * 100)
-            if json_data['ip_proxy']['flag']:
-                driver.quit()
-        else:
+        try:
+            global count
+            driver.get(json_data['url'])
+            driver.delete_all_cookies()
+            before_url = driver.current_url
             time.sleep(2)
-            return "提交时遇到错误，程序终止."
+            main(driver)
+            time.sleep(4)
+            later_url = driver.current_url  # 获取提交后的网址
+            if before_url != later_url:
+                count += 1
+                log.success(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！")
+                log.info("*" * 100)
+                if json_data["ip_proxy"]["flag"]:
+                    driver.quit()
+                    driver = new_driver(x_axi, y_axi)
+            else:
+                time.sleep(2)
+                log.error("提交时遇到错误，程序终止.")
+        except WebDriverException as e:
+            log.error(f"WebDriver连接异常: {str(e)}")
+            if "TUNNEL_CONNECTION_FAILED" in str(e):
+                driver.quit()
+            else:
+                driver.quit()
+                driver = new_driver(x_axi, y_axi)
+            continue
 
 
 def thread_group(thread_count):
