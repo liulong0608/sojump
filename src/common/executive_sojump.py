@@ -30,7 +30,7 @@ Chrome version： 118.0.5993.89
 chromedriver version： 118.0.5993.88
 """
 
-log = LoguruLogger("sojump.log", stream=1).get_logger()
+log = LoguruLogger("logs/sojump.log", stream=1).get_logger()
 
 
 def set_thread_count(THREAD_COUNT=2):  # 设置线程数量默认为2个
@@ -797,7 +797,7 @@ def run(x_axi, y_axi):
                 later_url = driver.current_url  # 获取提交后的网址
                 if before_url != later_url:
                     count += 1
-                    log.success(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！")
+                    log.success("\033[35m" + f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！" + "\033[0m")
                     log.info("*" * 100)
                     if json_data["ip_proxy"]["flag"]:
                         driver.quit()
@@ -811,7 +811,7 @@ def run(x_axi, y_axi):
                     driver.quit()
                 else:
                     driver.quit()
-                    driver = new_driver(x_axi, y_axi)
+                driver = new_driver(x_axi, y_axi)
                 continue
     except Exception as e:
         if "Unable to locate or obtain driver for chrome" in str(e):
@@ -830,6 +830,7 @@ def thread_group(thread_count):
 if __name__ == '__main__':
     count = 0  # 初始提交份数
     THREAD_COUNT = 2
-    if json_data['ip_proxy']['flag']:
-        THREAD_COUNT = 1
-    thread_group(THREAD_COUNT)
+    if count != 4:
+        if json_data['ip_proxy']['flag']:
+            THREAD_COUNT = 1
+        thread_group(THREAD_COUNT)
