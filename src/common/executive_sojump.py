@@ -126,10 +126,7 @@ def new_driver(x_axi, y_axi):
             "user-agent=Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/89.0.4389.105 Mobile Safari/537.36 MicroMessenger/8.0.0.1841(0x2800005C) "
             "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN")
-    try:
-        service = Service(r"C:\python\chromedriver.exe")
-    except Exception as e:
-        log.error(f"未找到‘C:\\python\\chromedriver.exe’路径下的浏览器驱动！{str(e)}")
+    service = Service("../../config/chromedriver.exe")
     driver = webdriver.Chrome(service=service, options=option)
     # driver.maximize_window()
     driver.set_window_size(512, 1440)
@@ -786,35 +783,41 @@ def main(driver):
 
 
 def run(x_axi, y_axi):
-    driver = new_driver(x_axi, y_axi)
-    while True:
-        try:
-            global count
-            driver.get(json_data['url'])
-            driver.delete_all_cookies()
-            before_url = driver.current_url
-            time.sleep(2)
-            main(driver)
-            time.sleep(4)
-            later_url = driver.current_url  # 获取提交后的网址
-            if before_url != later_url:
-                count += 1
-                log.success(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！")
-                log.info("*" * 100)
-                if json_data["ip_proxy"]["flag"]:
+    try:
+        driver = new_driver(x_axi, y_axi)
+        while True:
+            try:
+                global count
+                driver.get(json_data['url'])
+                driver.delete_all_cookies()
+                before_url = driver.current_url
+                time.sleep(2)
+                main(driver)
+                time.sleep(4)
+                later_url = driver.current_url  # 获取提交后的网址
+                if before_url != later_url:
+                    count += 1
+                    log.success(f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！")
+                    log.info("*" * 100)
+                    if json_data["ip_proxy"]["flag"]:
+                        driver.quit()
+                        driver = new_driver(x_axi, y_axi)
+                else:
+                    time.sleep(2)
+                    log.error("提交时遇到错误，程序终止.")
+            except WebDriverException as e:
+                log.error(f"WebDriver连接异常: {str(e)}")
+                if "TUNNEL_CONNECTION_FAILED" in str(e):
+                    driver.quit()
+                else:
                     driver.quit()
                     driver = new_driver(x_axi, y_axi)
-            else:
-                time.sleep(2)
-                log.error("提交时遇到错误，程序终止.")
-        except WebDriverException as e:
-            log.error(f"WebDriver连接异常: {str(e)}")
-            if "TUNNEL_CONNECTION_FAILED" in str(e):
-                driver.quit()
-            else:
-                driver.quit()
-                driver = new_driver(x_axi, y_axi)
-            continue
+                continue
+    except Exception as e:
+        if "Unable to locate or obtain driver for chrome" in str(e):
+            log.error(f"未找到‘chromedriver.exe’浏览器驱动！{str(e)}")
+        else:
+            log.error(f"未知错误！{str(e)}")
 
 
 def thread_group(thread_count):
