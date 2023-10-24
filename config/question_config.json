@@ -1,6 +1,6 @@
 {
     "url":  "https://www.wjx.cn/vm/hIVIpS7.aspx",
-    "ip_proxy": {"flag": false, "porxy_url": "http://http.tiqu.alibabaapi.com/getip?num=1&type=1&pack=118557&port=1&lb=1&pb=4&regions="},
+    "ip_proxy": {"flag": false, "porxy_url": ""},
     "wx_respond": 1,
     "submit_time": 2,
     "submit_random_time": {"flag": true, "min": 1, "max": 5},
@@ -14,7 +14,8 @@
       {
         "qid": 2,
         "type": "多选题",
-        "bili": [20,20,20,30,40,50]
+        "bili": [20,20,20,30,40,50],
+        "filling_option": {"flag": true, "option": 5, "fill_value": "没什么好填的"}
       },
       {
         "qid": 3,

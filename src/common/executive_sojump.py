@@ -1,7 +1,7 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          alpha.1.2.0
+**    @version          alpha.1.2.1
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
@@ -170,8 +170,14 @@ def multiple_selection(driver, qid: int, bili: list):
     flag = False
     while not flag:
         for count in range(len(_eval(bili))):
-            if duoxuan(_eval(bili)[count]):
+            index: bool = duoxuan(_eval(bili)[count])
+            if index:
                 options[count].click()
+                if json_data["deploy"][qid-1]['filling_option']['flag']:
+                    if count == json_data["deploy"][qid-1]['filling_option']['option']:
+                        time.sleep(0.3)
+                        get_element_by_css(driver, '.ui-checkbox div input.OtherText').send_keys(
+                            json_data["deploy"][qid-1]['filling_option']['fill_value'])
                 time.sleep(0.5)
                 flag = True
     log.success(f"第{qid}题【多选题】完成！比例分布为：{bili}")
