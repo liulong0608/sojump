@@ -1,11 +1,13 @@
 """         ==Coding: UTF-8==
 **    @Project :        Sojump
 **    @fileName         executive_sojump.py
-**    @version          alpha.1.2.1
+**    @version          v1.2.2
 **    @author           Echo
 **    @Warehouse        https://gitee.com/liu-long068/
 **    @EditTime         2023/8/12
 """
+from typing import List
+
 from selenium.common import WebDriverException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.wait import WebDriverWait
@@ -173,14 +175,24 @@ def multiple_selection(driver, qid: int, bili: list):
             index: bool = duoxuan(_eval(bili)[count])
             if index:
                 options[count].click()
-                if json_data["deploy"][qid-1]['filling_option']['flag']:
-                    if count == json_data["deploy"][qid-1]['filling_option']['option']:
+                if json_data["deploy"][qid - 1]['filling_option']['flag']:
+                    if count == json_data["deploy"][qid - 1]['filling_option']['option']:
                         time.sleep(0.3)
                         get_element_by_css(driver, '.ui-checkbox div input.OtherText').send_keys(
-                            json_data["deploy"][qid-1]['filling_option']['fill_value'])
+                            json_data["deploy"][qid - 1]['filling_option']['fill_value'])
                 time.sleep(0.5)
                 flag = True
     log.success(f"第{qid}题【多选题】完成！比例分布为：{bili}")
+
+
+def get_options(driver, qid: int) -> List:
+    """
+    获取所有选项
+    :param driver: 浏览器
+    :param qid: 题号
+    :return: 选项
+    """
+    return get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-checkbox')
 
 
 def select_options(driver, qid, min_options, bili):
@@ -193,22 +205,40 @@ def select_options(driver, qid, min_options, bili):
     :return:
     """
     log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
-    temp_flag = 0
-    ops = get_all_blocks(driver)[qid - 1].find_elements(By.CSS_SELECTOR, '.ui-checkbox')
-    while temp_flag < min_options:
-        temp_answer = []
-        for count in range(len(_eval(bili))):
-            if duoxuan(_eval(bili)[count]):
-                temp_answer.append(count)
-                temp_flag += 1
-            if count == len(_eval(bili)) - 1 and temp_flag < min_options:
-                temp_flag = 0
-            elif count == len(_eval(bili)) - 1 and temp_flag >= min_options:
-                for count in range(len(temp_answer)):
-                    # ops列表，包含了需要点击的元素
-                    ops[temp_answer[count]].click()
-                    time.sleep(0.5)
+    ops = get_options(driver, qid)
+    temp = []
+    ops_count = 0
+    while ops_count < min_options:
+        for i in range(len(_eval(bili))):
+            if duoxuan(_eval(bili)[i]):
+                temp.append(i)
+                ops_count += 1
+    for j in temp:
+        ops[j].click()
     log.success(f"第{qid}题【多选题】（至少{min_options}个选项）完成！比例分布为：{bili}")
+
+
+def multiple_maximum_selection(driver, qid: int, max_options: int, bili: list):
+    """
+    多选题处理函数-最多选择max_options个选项
+    :param driver: 浏览器
+    :param qid: 题号
+    :param max_options: 最多选择几项
+    :param bili: 题目选项选择比例
+    :return:
+    """
+    log.info(f"第{qid}题配置参数：{json_data['deploy'][qid - 1]}")
+    ops = get_options(driver, qid)
+    temp = []
+    for i in range(max_options):
+        if duoxuan(_eval(bili)[i]):
+            temp.append(i)
+    if len(temp) != 0:
+        for j in temp:
+            ops[j].click()
+    else:
+        ops[random.randint(0, len(ops))].click()
+    log.success(f"第{qid}题【多选题】（最多{max_options}个选项）完成！比例分布为：{bili}")
 
 
 def fill_in_the_blank(driver, qid: int, bili, value: list):
@@ -676,6 +706,10 @@ def handle_select_option(driver, item):  # 多选-至少选择几项
     select_options(driver, item['qid'], item['min_options'], item['bili'])
 
 
+def handle_multiple_maximum_selection(driver, item):  # 多选-
+    multiple_maximum_selection(driver, item['qid'], item['max_options'], item['bili'])
+
+
 def handle_fill_blank(driver, item):  # 填空
     fill_in_the_blank(driver, item['qid'], item['bili'], item['value'])
 
@@ -747,6 +781,8 @@ def main(driver):
                 handle_multiple_selection(driver, item)
             elif item['type'] == '多选题-至少选择几项':
                 handle_select_option(driver, item)
+            elif item['type'] == '多选题-最多选择几项':
+                handle_multiple_maximum_selection(driver, item)
             elif item['type'] == '填空题':
                 handle_fill_blank(driver, item)
             elif item['type'] == '多项填空题':
@@ -776,7 +812,7 @@ def main(driver):
             index += 1
         if i < page_num - 1:
             click(driver, 'div#divNext a')
-            time.sleep(1)
+            time.sleep(8)
         else:
             # 提交
             time.sleep(1)
@@ -803,7 +839,8 @@ def run(x_axi, y_axi):
                 later_url = driver.current_url  # 获取提交后的网址
                 if before_url != later_url:
                     count += 1
-                    log.success("\033[35m" + f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！" + "\033[0m")
+                    log.success(
+                        "\033[35m" + f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{count}份！" + "\033[0m")
                     log.info("*" * 100)
                     if json_data["ip_proxy"]["flag"]:
                         driver.quit()
