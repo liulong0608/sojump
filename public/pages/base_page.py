@@ -1,7 +1,7 @@
 # == Coding: UTF-8 ==
 # @Project :        sojump
 # @fileName         base_page.py  
-# @version          v1.0.1
+# @version          bate1.2.3
 # @author           LIULONG
 # @GiteeWarehouse   https://gitee.com/liu-long068/
 # @WritingTime      2023/10/21 23:17
@@ -21,7 +21,7 @@ from src.utils.logurus import LoguruLogger
 from src.utils.read_config import read_ini_file
 from src.utils.driver_options import driver_options
 
-log = LoguruLogger(r"D:\sojump\src\common\logs\sojump.log", stream=1).get_logger()
+log = LoguruLogger(r"/src/common/logs/sojump.log", stream=1).get_logger()
 
 
 class BasePage:
@@ -150,3 +150,14 @@ class BasePage:
         :return: 网址内容
         """
         return self.driver.current_url
+
+    def upload_file(self, by: Text, value: Text, file_path: Text) -> None:
+        """
+        上传文件
+        :param by: 定位方式
+        :param value: 元素路径
+        :param file_path: 文件路径
+        :return: None
+        """
+        element = self.get_element(by, value)
+        element.send_keys(file_path)
