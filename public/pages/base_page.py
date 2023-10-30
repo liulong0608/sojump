@@ -34,11 +34,20 @@ class BasePage:
     def new_driver() -> WebDriver:
         service = Service(read_ini_file("chromeDriver", "path"))
         driver = webdriver.Chrome(service=service,
-                                  options=driver_options(is_wx=read_ini_file("environment", "is_wx")))
+                                  options=driver_options(is_wx=read_ini_file("environment", "USE_WX",
+                                                                             file_path=r"D:\sojump\main\线性结构脚本配置.ini")))
         driver.maximize_window()
         driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument',
                                {'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'})
         return driver
+
+    @staticmethod
+    def clear_cookies(driver):
+        """
+        清除Selenium中的cookie
+        :param driver: Selenium浏览器实例
+        """
+        driver.delete_all_cookies()
 
     def quit(self):
         self.driver.quit()
@@ -114,7 +123,7 @@ class BasePage:
         element = self.get_element(by, value)
         element.click()
 
-    def fillIn(self, by: Text, value: Text, text: Any) -> None:
+    def fillIn(self, by: Text, value: Text | WebElement, text: Any) -> None:
         """
         输入文本内容
         :param by: 定位方式

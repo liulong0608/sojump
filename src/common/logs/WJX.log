@@ -1,0 +1,1 @@
+2023-10-28 21:20:09 - MainProcess | MainThread | obtain_all_blocks.get_all_blocks:21 - ERROR -Error occurred while getting all blocks: 'WebDriver' object has no attribute 'get_elements'
