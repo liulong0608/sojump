@@ -7,10 +7,12 @@
 # @WritingTime      2023/10/21 23:17
 # @Software:        PyCharm
 # ====/******/=====
+import random
 from typing import Text, Tuple, List, Any
 
 from selenium import webdriver
 from selenium.common import NoSuchElementException
+from selenium.webdriver import ActionChains
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -86,8 +88,8 @@ class BasePage:
         }
         try:
             locator = (selector_map[by], value)  # 元素定位表达式
-            self.__wait_visible(locator)    # 等待元素可见
-            element = self.driver.find_element(*locator)    # 获取元素
+            self.__wait_visible(locator)  # 等待元素可见
+            element = self.driver.find_element(*locator)  # 获取元素
             return element
         except NoSuchElementException:
             log.error(f"Element not found by {by}: {value}")
@@ -107,8 +109,8 @@ class BasePage:
         }
         try:
             locator = (selector_map[by], value)  # 元素定位表达式
-            self.__wait_visible(locator)    # 等待元素可见
-            elements = self.driver.find_elements(*locator)    # 获取元素
+            self.__wait_visible(locator)  # 等待元素可见
+            elements = self.driver.find_elements(*locator)  # 获取元素
             return elements
         except NoSuchElementException:
             log.error(f"Element not found by {by}: {value}")
@@ -134,13 +136,14 @@ class BasePage:
         element = self.get_element(by, value)
         element.send_keys(text)
 
-    def executeJsScript(self, script: Text) -> None:
+    def executeJsScript(self, script: Text, args: Any) -> None:
         """
         执行js脚本
         :param script: 脚本内容
+        :param args: 执行脚本的参数
         :return: None
         """
-        self.driver.execute_script(script)
+        self.driver.execute_script(script, args)
 
     def getAttribute(self, by: Text, value: Text, attribute: Text) -> Text:
         """
@@ -170,3 +173,36 @@ class BasePage:
         """
         element = self.get_element(by, value)
         element.send_keys(file_path)
+
+    def select_option(self, select_element: WebElement, options_list: List[Text]) -> None:
+        """
+        选择元素
+        :param select_element: 元素
+        :param options_list: 选项列表
+        :return: None
+        """
+        try:
+            locator = (By.CSS_SELECTOR, 'option')
+            self.__wait_visible(locator)
+            options = [option.text for option in select_element.find_elements(By.CSS_SELECTOR, 'option')]
+            if len(options) > 0:
+                options.pop(0)  # 排除第一个
+                selected_option = random.choice(options)
+                self.executeJsScript(f"arguments[0].value='{selected_option}';", select_element)
+                self.executeJsScript("arguments[0].dispatchEvent(new Event('change'));", select_element)
+            else:
+                log.error("No options found in select element")
+                return
+        except IndexError:
+            log.error("No options found in select element")
+        except Exception as e:
+            log.error(f"Error selecting random option: {e}")
+
+    def drag_element_horizontally(self, element: WebElement, x: int) -> None:
+        """
+        拖动元素
+        :param element: 元素
+        :param x: 拖动的距离
+        :return: None
+        """
+        ActionChains(self.driver).drag_and_drop_by_offset(element, x, 0).perform()

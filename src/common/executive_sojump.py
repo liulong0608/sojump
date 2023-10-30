@@ -176,10 +176,13 @@ def multiple_selection(driver, qid: int, bili: list):
             if index:
                 options[count].click()
                 if json_data["deploy"][qid - 1]['filling_option']['flag']:
-                    if count == json_data["deploy"][qid - 1]['filling_option']['option']:
-                        time.sleep(0.3)
-                        get_element_by_css(driver, '.ui-checkbox div input.OtherText').send_keys(
-                            json_data["deploy"][qid - 1]['filling_option']['fill_value'])
+                    temp_list = json_data["deploy"][qid - 1]['filling_option']['subkeys']
+                    for index in range(len(temp_list)):
+                        if count == temp_list[index]['option']:
+                            time.sleep(0.3)
+                            get_element_by_css(driver, '.ui-checkbox div input.OtherText').send_keys(
+                                temp_list[index]['fill_value'])
+
                 time.sleep(0.5)
                 flag = True
     log.success(f"第{qid}题【多选题】完成！比例分布为：{bili}")

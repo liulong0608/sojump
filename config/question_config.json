@@ -1,203 +1,218 @@
 {
-    "url":  "https://www.wjx.cn/vm/hIVIpS7.aspx",
-    "ip_proxy": {"flag": false, "porxy_url": ""},
-    "wx_respond": 1,
-    "submit_time": 2,
-    "submit_random_time": {"flag": true, "min": 1, "max": 5},
-    "deploy": [
-      {
-      "qid": 1,
-      "type": "单选题",
-      "bili": "randomBili(2)",
-      "filling_option": {"flag": true, "option": 1, "fill_value": "没什么好填的"}
-      },
-      {
-        "qid": 2,
-        "type": "多选题",
-        "bili": [20,20,20,30,40,50],
-        "filling_option": {"flag": true, "option": 5, "fill_value": "没什么好填的"}
-      },
-      {
-        "qid": 3,
-        "type": "填空题",
-        "bili": [30,40,30],
-        "value": ["张三", "李四", "王五"]
-      },
-      {
-        "qid": 4,
-        "type": "下拉题",
-        "bili": [25,25,25,25]
-      },
-      {
-        "qid": 5,
-        "type": "多选题-至少选择几项",
-        "bili": [100,100,100,100],
-        "min_options": 3
-      },
-      {
-        "qid": 6,
-        "type": "单选矩阵题",
-        "subkeys": [
-            {
-                "subkeys_qid": 1,
-                "bili": [20,20,20,20,20]
-            },{
-                "subkeys_qid": 2,
-                "bili": [20,20,20,20,20]
-            },
-            {
-                "subkeys_qid": 3,
-                "bili": [20,20,20,20,20]
-            },
-            {
-                "subkeys_qid": 4,
-                "bili": [20,20,20,20,20]
-            }
-        ]
-      },
-      {
-        "qid": 7,
-        "type": "排序题",
-        "bili": "随机"
-      },
-      {
-        "qid": 8,
-        "type": "单选量表题",
-        "bili": [20,20,20,20,20]
-      },
-      {
-        "qid": 9,
-        "type": "多项填空题",
-        "subkeys": [
-            {
-                "subkeys_qid": 1,
-                "bili": [25,25,25,25],
-                "value": ["张三","李四","王五","赵六"]
-            },
-            {
-                "subkeys_qid": 2,
-                "bili": [25,25,25,25],
-                "value": [20,21,22,23]
-            },
-            {
-                "subkeys_qid": 3,
-                "bili": [25,25,25,25],
-                "value": ["135001111111","135001111112","135001111113","135001111114"]
-            }
-        ]
-      },
-      {
-        "qid": 10,
-        "type": "多级下拉题-不随机",
-        "subkeys": [
-            {
-                "subkeys_qid": 1,
-                "value": "华北地区"
-            },
-            {
-                "subkeys_qid": 2,
-                "value": "山东省"
-            },
-            {
-                "subkeys_qid": 3,
-                "value": "青岛市"
-            },
-            {
-                "subkeys_qid": 4,
-                "value": "黄岛区"
-            }
-        ]
-      },
-      {
-        "qid": 11,
-        "type": "多级下拉题-随机",
-        "Drop-downNumber": 3,
-        "property": "随机"
-      },
-      {
-        "qid": 12,
-        "type": "矩阵填空题",
-        "subkeys": [
-            {
-                "subkeys_qid": 1,
-                "value": ["差","一般","好","极好"],
-                "bili": [25,25,25,25]
-            },
-            {
-                "subkeys_qid": 2,
-                "value": ["差","一般","好","极好"],
-                "bili": [25,25,25,25]
-            },
-            {
-                "subkeys_qid": 3,
-                "value": ["差","一般","好","极好"],
-                "bili": [25,25,25,25]
-            }
-        ]
-      },
-      {
-        "qid": 13,
-        "type": "矩阵滑块题",
-        "subkeys": [
-            {
-                "subkeys_qid": 1,
-                "value_random": {"flag": true, "min": 0, "max": 100},
-                "value": [10,22,23,80]
-            },
-            {
-                "subkeys_qid": 2,
-                "value_random": {"flag": true, "min": 0, "max": 100},
-                "value": [50,70,88,93]
-            }
-        ]
-      },
-      {
-        "qid": 14,
-        "type": "矩阵量表题",
-        "subkeys": [
-            {
-                "subkeys_qid": 1,
-                "bili": [20,20,20,20,20]
-            },
-            {
-                "subkeys_qid": 2,
-                "bili": [20,20,20,20,20]
-            },
-            {
-                "subkeys_qid": 3,
-                "bili": [20,20,20,20,20]
-            }
-        ]
-      },
-      {
-        "qid": 15,
-        "type": "多选矩阵题",
-        "subkeys": [
-            {
-                "subkeys_qid": 1,
-                "bili": [25,25,25,25]
-            },
-            {
-                "subkeys_qid": 2,
-                "bili": [25,25,25,25]
-            },
-            {
-                "subkeys_qid": 3,
-                "bili": [25,25,25,25]
-            },
-            {
-                "subkeys_qid": 4,
-                "bili": [25,25,25,25]
-            }
-        ]
-      },
-      {
-        "qid": 16,
-        "type": "多选题-最多选择几项",
-        "bili": [20,20,20,20,20],
-        "max_options": 3
-      }
-    ]
+	"url": "https://www.wjx.cn/vm/hIVIpS7.aspx",
+	"ip_proxy": {
+		"flag": false,
+		"porxy_url": ""
+	},
+	"wx_respond": 1,
+	"submit_time": 2,
+	"submit_random_time": {
+		"flag": true,
+		"min": 1,
+		"max": 5
+	},
+	"deploy": [{
+			"qid": 1,
+			"type": "单选题",
+			"bili": "randomBili(2)",
+			"filling_option": {
+				"flag": true,
+				"option": 1,
+				"fill_value": "没什么好填的"
+			}
+		},
+		{
+			"qid": 2,
+			"type": "多选题",
+			"bili": [10, 50, 20, 30, 40, 50],
+			"filling_option": {
+				"flag": true,
+				"subkeys": [
+				        {"flag": true,"option": 0,"fill_value": "第一个选项没什么好填的"},
+				        {"flag": true,"option": 1,"fill_value": "第二个选项没什么好填的"}
+				]
+			}
+		},
+		{
+			"qid": 3,
+			"type": "填空题",
+			"bili": [30, 40, 30],
+			"value": ["张三", "李四", "王五"]
+		},
+		{
+			"qid": 4,
+			"type": "下拉题",
+			"bili": [25, 25, 25, 25]
+		},
+		{
+			"qid": 5,
+			"type": "多选题-至少选择几项",
+			"bili": [100, 100, 100, 100],
+			"min_options": 3
+		},
+		{
+			"qid": 6,
+			"type": "单选矩阵题",
+			"subkeys": [{
+					"subkeys_qid": 1,
+					"bili": [20, 20, 20, 20, 20]
+				}, {
+					"subkeys_qid": 2,
+					"bili": [20, 20, 20, 20, 20]
+				},
+				{
+					"subkeys_qid": 3,
+					"bili": [20, 20, 20, 20, 20]
+				},
+				{
+					"subkeys_qid": 4,
+					"bili": [20, 20, 20, 20, 20]
+				}
+			]
+		},
+		{
+			"qid": 7,
+			"type": "排序题",
+			"bili": "随机"
+		},
+		{
+			"qid": 8,
+			"type": "单选量表题",
+			"bili": [20, 20, 20, 20, 20]
+		},
+		{
+			"qid": 9,
+			"type": "多项填空题",
+			"subkeys": [{
+					"subkeys_qid": 1,
+					"bili": [25, 25, 25, 25],
+					"value": ["张三", "李四", "王五", "赵六"]
+				},
+				{
+					"subkeys_qid": 2,
+					"bili": [25, 25, 25, 25],
+					"value": [20, 21, 22, 23]
+				},
+				{
+					"subkeys_qid": 3,
+					"bili": [25, 25, 25, 25],
+					"value": ["135001111111", "135001111112", "135001111113", "135001111114"]
+				}
+			]
+		},
+		{
+			"qid": 10,
+			"type": "多级下拉题-不随机",
+			"subkeys": [{
+					"subkeys_qid": 1,
+					"value": "华北地区"
+				},
+				{
+					"subkeys_qid": 2,
+					"value": "山东省"
+				},
+				{
+					"subkeys_qid": 3,
+					"value": "青岛市"
+				},
+				{
+					"subkeys_qid": 4,
+					"value": "黄岛区"
+				}
+			]
+		},
+		{
+			"qid": 11,
+			"type": "多级下拉题-随机",
+			"Drop-downNumber": 3,
+			"property": "随机"
+		},
+		{
+			"qid": 12,
+			"type": "矩阵填空题",
+			"subkeys": [{
+					"subkeys_qid": 1,
+					"value": ["差", "一般", "好", "极好"],
+					"bili": [25, 25, 25, 25]
+				},
+				{
+					"subkeys_qid": 2,
+					"value": ["差", "一般", "好", "极好"],
+					"bili": [25, 25, 25, 25]
+				},
+				{
+					"subkeys_qid": 3,
+					"value": ["差", "一般", "好", "极好"],
+					"bili": [25, 25, 25, 25]
+				}
+			]
+		},
+		{
+			"qid": 13,
+			"type": "矩阵滑块题",
+			"subkeys": [{
+					"subkeys_qid": 1,
+					"value_random": {
+						"flag": true,
+						"min": 0,
+						"max": 100
+					},
+					"value": [10, 22, 23, 80]
+				},
+				{
+					"subkeys_qid": 2,
+					"value_random": {
+						"flag": true,
+						"min": 0,
+						"max": 100
+					},
+					"value": [50, 70, 88, 93]
+				}
+			]
+		},
+		{
+			"qid": 14,
+			"type": "矩阵量表题",
+			"subkeys": [{
+					"subkeys_qid": 1,
+					"bili": [20, 20, 20, 20, 20]
+				},
+				{
+					"subkeys_qid": 2,
+					"bili": [20, 20, 20, 20, 20]
+				},
+				{
+					"subkeys_qid": 3,
+					"bili": [20, 20, 20, 20, 20]
+				}
+			]
+		},
+		{
+			"qid": 15,
+			"type": "多选矩阵题",
+			"subkeys": [{
+					"subkeys_qid": 1,
+					"bili": [25, 25, 25, 25]
+				},
+				{
+					"subkeys_qid": 2,
+					"bili": [25, 25, 25, 25]
+				},
+				{
+					"subkeys_qid": 3,
+					"bili": [25, 25, 25, 25]
+				},
+				{
+					"subkeys_qid": 4,
+					"bili": [25, 25, 25, 25]
+				}
+			]
+		},
+		{
+			"qid": 16,
+			"type": "多选题-最多选择几项",
+			"bili": [20, 20, 20, 20, 20],
+			"max_options": 3
+		}
+	]
 }
-
-

@@ -14,7 +14,7 @@ from src.utils.logurus import LoguruLogger
 config_file_path = os.path.split(os.path.realpath(__file__))[0] + '\\'  # D:\Sojump\config
 
 # 题型配置文件路径
-question_config_path = config_file_path + 'test.json'
+question_config_path = config_file_path + 'question_config.json'
 
 # 浏览器驱动路径, 默认使用谷歌浏览器
 CHROMEDRIVER_PATH = r" D:\sojump\config\chromedriver.exe"  # Chrome浏览器驱动路径
