@@ -1,1 +1,3 @@
 2023-10-28 21:20:09 - MainProcess | MainThread | obtain_all_blocks.get_all_blocks:21 - ERROR -Error occurred while getting all blocks: 'WebDriver' object has no attribute 'get_elements'
+2023-10-31 18:19:42 - MainProcess | MainThread | obtain_ip.get_ip:32 - INFO -提取到ip：[{'ip': '175.175.192.193', 'port': '4315'}]
+2023-10-31 18:19:47 - MainProcess | MainThread | obtain_ip.get_ip:32 - INFO -提取到ip：[{'ip': '113.133.23.57', 'port': '4331'}]
