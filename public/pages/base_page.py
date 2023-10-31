@@ -8,10 +8,12 @@
 # @Software:        PyCharm
 # ====/******/=====
 import random
+import time
 from typing import Text, Tuple, List, Any
 
 from selenium import webdriver
 from selenium.common import NoSuchElementException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.chrome.service import Service
@@ -35,9 +37,10 @@ class BasePage:
     @staticmethod
     def new_driver() -> WebDriver:
         service = Service(read_ini_file("chromeDriver", "path"))
+        wx = read_ini_file("environment", "USE_WX", file_path=r"D:\sojump\main\线性结构脚本配置.ini")
+        proxy = read_ini_file("proxy", "USE_IP_PROXY", file_path=r"D:\sojump\main\线性结构脚本配置.ini")
         driver = webdriver.Chrome(service=service,
-                                  options=driver_options(is_wx=read_ini_file("environment", "USE_WX",
-                                                                             file_path=r"D:\sojump\main\线性结构脚本配置.ini")))
+                                  options=driver_options(wx, proxy))
         driver.maximize_window()
         driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument',
                                {'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'})
@@ -92,6 +95,8 @@ class BasePage:
             element = self.driver.find_element(*locator)  # 获取元素
             return element
         except NoSuchElementException:
+            log.error(f"Element not found by {by}: {value}")
+        except TimeoutException:
             log.error(f"Element not found by {by}: {value}")
 
     def get_elements(self, by: Text, value: Text) -> List[WebElement]:
@@ -206,3 +211,28 @@ class BasePage:
         :return: None
         """
         ActionChains(self.driver).drag_and_drop_by_offset(element, x, 0).perform()
+
+    def verify(self):
+        """ 处理验证函数 """
+        try:
+            # 出现点击验证码验证
+            time.sleep(1)
+            try:
+                # 点击对话框的确认按钮
+                self.driver.find_element(By.XPATH, '//*[@id="layui-layer1"]/div[3]/a').click()
+                # 点击智能检测按钮
+                self.driver.find_element(By.XPATH, '//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
+            except:
+                # 点击智能检测按钮
+                self.driver.find_element(By.XPATH, '//*[@id="SM_BTN_1"]/div[1]/div[3]').click()
+            time.sleep(3)
+        except:
+            log.info("无验证")
+            # 滑块验证
+        try:
+            slider = self.driver.find_element(By.XPATH, '//*[@id="nc_1__scale_text"]/span')
+            if str(slider.text).startswith("请按住滑块"):
+                width = slider.size.get('width')
+                ActionChains(self.driver).drag_and_drop_by_offset(slider, width, 0).perform()
+        except:
+            pass

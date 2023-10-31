@@ -1,7 +1,6 @@
 # == Coding: UTF-8 ==
 # @Project :        sojump
 # @fileName         ActionWJX.py  
-# @version          v0.1
 # @author           LIULONG
 # @GiteeWarehouse   https://gitee.com/liu-long068/
 # @WritingTime      2023/10/21 22:52
@@ -15,6 +14,7 @@ chromedriver version： 118.0.5993.88
 代码采用线性结构
 """
 import random
+import threading
 import time
 from typing import List, Text
 
@@ -30,282 +30,319 @@ from src.utils.danxuan_duoxuan import danxuan, duoxuan
 from src.utils.next_page import next_page
 from src.utils.obtain_all_blocks import get_all_blocks
 from src.utils.querySelector import querySelectorAll
+from src.utils.read_config import read_ini_file
 from src.utils.submit import submit
-from src.utils.verify import verify
 
-# ####################################################################
-# 全局变量
-WJX_URL = "https://www.wjx.cn/vm/hIVIpS7.aspx"
-USE_IP_PROXY = False  # 是否使用IP代理
-driver = BasePage()
-# ####################################################################
-driver.open_url(WJX_URL)  # 打开问卷
-# driver.clear_cookies(driver)    # 清除cookies
-# blocks = get_all_blocks(driver)  # 获取问卷所有题块
-# ####################################################################
-# 1 单选
-SerialNumber = driver.get_elements("css", "#div1 div.ui-radio")  # 第一题，就是div1
-# bili = randomBili(2)  # 生成随机比例
-bili = [0, 100]
-values = ["填0", "填1", "填2"]  # 有填空待填的内容
-index = danxuan(bili)
-SerialNumber[index].click()
-if index == 1:  # 如果第一个选项有填空，则==0，第二个选项有填空，==1 ...
-    temp_loc: WebElement = SerialNumber[index].find_element(By.CSS_SELECTOR, "input.OtherRadioText")
-    temp_loc.send_keys(random.choices(values))
+lock = threading.Lock()
+_count = 0
 
-# 2 多选
-SerialNumber = driver.get_elements("css", "#div2 div.ui-checkbox")
-bili = [100, 100, 20, 30, 50, 20]
-values = ["填0", "填1", "填2"]  # 有填空待填的内容
-flag = False
-while not flag:
-    for count in range(len(bili)):
-        index = duoxuan(bili[count])
-        if index:
-            SerialNumber[count].click()
-            if count == 0:  # 如果第一个选项有填空，则==0，第二个选项有填空，==1 ...
-                temp_loc: WebElement = SerialNumber[count].find_element(By.CSS_SELECTOR, "input.OtherText")
-                temp_loc.send_keys(random.choices(values))
-            elif count == 1:
-                temp_loc: WebElement = SerialNumber[count].find_element(By.CSS_SELECTOR, "input.OtherText")
-                temp_loc.send_keys(random.choices(values))
-            flag = True
 
-# 3 填空题
-SerialNumber = driver.get_element("css", "#div3 div.ui-input-text input")
-bili = randomBili(3)
-values = ["填0", "填1", "填2"]
-SerialNumber.send_keys(values[danxuan(bili)])
+def handle_wjx(driver):
+    # ####################################################################
+    # 全局变量
+    # ####################################################################
 
-# 4 下拉框题
-driver.click("css", "#div4 .select2-selection.select2-selection--single")
-options = driver.get_elements("css", "#select2-q4-results li")  # 第4题，就是q4
-options = options[1:]  # 去掉第一个选项
-time.sleep(0.3)
-options[danxuan(bili)].click()
+    # driver.clear_cookies(driver)    # 清除cookies
+    # ####################################################################
+    # 1 单选
+    SerialNumber = driver.get_elements("css", "#div1 div.ui-radio")  # 第一题，就是div1
+    # bili = randomBili(2)  # 生成随机比例
+    bili = [0, 100]
+    values = ["填0", "填1", "填2"]  # 有填空待填的内容
+    index = danxuan(bili)
+    SerialNumber[index].click()
+    if index == 1:  # 如果第一个选项有填空，则==0，第二个选项有填空，==1 ...
+        temp_loc: WebElement = SerialNumber[index].find_element(By.CSS_SELECTOR, "input.OtherRadioText")
+        temp_loc.send_keys(random.choices(values))
 
-# 5 多选题-至少选3项
-SerialNumber = driver.get_elements("css", "#div5 div.ui-checkbox")
-temp = []
-ops_count = 0
-while ops_count < 3:  # 至少选3项,所以就是<3
-    for i in range(len(bili)):
-        if duoxuan(bili[i]):
-            temp.append(i)
-            ops_count += 1
-for j in temp:
-    SerialNumber[j].click()
-
-# 6 单选矩形题、矩阵量表题
-matrix_options = driver.get_elements("css", "#div6 tbody tr[tp='d']")
-subkeys_length = len(matrix_options)
-for index in range(len(matrix_options)):
-    bili = randomBili(4)
-    options = matrix_options[index].find_elements(By.CSS_SELECTOR, "td:not(.scalerowtitletd)")
-    options[danxuan(bili)].click()
-
-# 7 排序题
-jmix_options = driver.get_elements("css", "#div7 ul li")
-for i in range(1, len(jmix_options) + 1):
-    index = random.randint(i, len(jmix_options))
-    driver.get_element("css", f"#div7 > ul > li:nth-child({index})").click()
-    time.sleep(0.5)
-log.success(f'第{7}题【排序题】完成！比例分布为：随机排序')
-
-# 8 量表题
-SerialNumber = driver.get_elements("css", '#div8 ul[tp="d"] li')
-# bili = randomBili(2)  # 生成随机比例
-bili = [20, 20, 20, 20]
-index = danxuan(bili)
-SerialNumber[index].click()
-
-# 9 多项填空
-SerialNumber = driver.get_elements("css", "#div9 .topictext span.textCont")
-# 第一个空
-bili = randomBili(3)
-values = ["张三", "李四", "王五"]
-SerialNumber[0].send_keys(values[danxuan(bili)])
-# 第二个空
-bili = randomBili(3)
-values = [23, 24, 30]
-SerialNumber[1].send_keys(values[danxuan(bili)])
-# 第三个空
-bili = randomBili(3)
-values = ["135000000", "151000000", "198000000"]
-SerialNumber[2].send_keys(values[danxuan(bili)])
-
-# 10 多级下拉题-选项不随机
-subkeys_list = [
-    {
-        "subkeys_qid": 1,
-        "value": "华北地区"
-    },
-    {
-        "subkeys_qid": 2,
-        "value": "山东省"
-    },
-    {
-        "subkeys_qid": 3,
-        "value": "青岛市"
-    },
-    {
-        "subkeys_qid": 4,
-        "value": "黄岛区"
-    }
-]
-driver.click("css", "#div10 input#q10")  # 第10题，就是div0, q10
-for i in range(len(subkeys_list)):
-    select_element = driver.get_element("css",
-                                        f'#divFrameData div.ui-select:nth-child({subkeys_list[i]["subkeys_qid"]}) select')
-    if select_element:
-        driver.executeJsScript(f"arguments[0].value='{subkeys_list[i]['value']}';", select_element)
-        driver.executeJsScript("arguments[0].dispatchEvent(new Event('change'));", select_element)
-    time.sleep(0.8)
-driver.click("css", ".layer_save_btn a")
-
-# ###############################################
-# 点击下一页
-next_page(driver)
-# ###############################################
-
-# 11 多级下拉题-选项随机
-numberOfDropDownBoxes = 3  # 下拉框个数
-options = {}
-for i in range(1, int(numberOfDropDownBoxes) + 1):
-    options[f"options_{i}"] = []
-driver.click("css", '#div11 input#q11')
-select_elements = driver.get_elements("css", '#divFrameData .layer_content select')
-for index in range(1, int(numberOfDropDownBoxes) + 1):
-    select_element = select_elements[index - 1]
-    if select_element:
-        options[f"options_{index}"].append(select_element)
-        time.sleep(0.5)
-        driver.select_option(select_element, options[f"options_{index}"])
-        time.sleep(0.5)
-time.sleep(0.5)
-driver.click("css", ".layer_save_btn a")
-log.success(f'【多级下拉框】完成！')
-
-# 12 矩阵填空题
-subkeys_list = [
-    {
-        "subkeys_qid": 1,
-        "value": ["差", "一般", "好", "极好"],
-        "bili": [25, 25, 25, 25]
-    },
-    {
-        "subkeys_qid": 2,
-        "value": ["差", "一般", "好", "极好"],
-        "bili": [25, 25, 25, 25]
-    },
-    {
-        "subkeys_qid": 3,
-        "value": ["差", "一般", "好", "极好"],
-        "bili": [25, 25, 25, 25]
-    }
-]
-options = driver.get_elements("css", "#div12 div.ui-input-text textarea")
-for index in range(len(subkeys_list)):
-    options[index].send_keys(subkeys_list[index]["value"][danxuan(subkeys_list[index]["bili"])])
-    time.sleep(0.3)
-log.success(f'【矩阵填空题】完成!')
-
-# 13 矩阵滑条题
-subkeys_list = [
-    {
-        "subkeys_qid": 1,
-        "value_random": {
-            "flag": True,
-            "min": 0,
-            "max": 100
-        },
-        "value": [10, 22, 23, 80]
-    },
-    {
-        "subkeys_qid": 2,
-        "value_random": {
-            "flag": True,
-            "min": 0,
-            "max": 100
-        },
-        "value": [50, 70, 88, 93]
-    }
-]
-options = driver.get_elements("css", "#div13 input.ui-slider-input")
-for index in range(len(subkeys_list)):
-    if subkeys_list[index]['value_random']:
-        fill_value = random.randint(subkeys_list[index]['value_random']['min'],
-                                    subkeys_list[index]['value_random']['max'])
-        options[index].send_keys(fill_value)
-        time.sleep(0.3)
-    else:
-        fill_value = subkeys_list[index]['value']
-        options[index].send_keys(fill_value)
-        time.sleep(0.3)
-
-# 14 矩阵量表题
-matrix_options = driver.get_elements("css", "#div14 tbody tr[tp='d']")
-subkeys_length = len(matrix_options)
-for index in range(len(matrix_options)):
-    bili = randomBili(4)
-    options = matrix_options[index].find_elements(By.CSS_SELECTOR, "td:not(.scalerowtitletd)")
-    options[danxuan(bili)].click()
-
-# 15 多选矩阵题
-subkeys_list = [
-    {
-        "subkeys_qid": 1,
-        "bili": [25, 25, 25, 25]
-    },
-    {
-        "subkeys_qid": 2,
-        "bili": [25, 25, 25, 25]
-    },
-    {
-        "subkeys_qid": 3,
-        "bili": [25, 25, 25, 25]
-    },
-    {
-        "subkeys_qid": 4,
-        "bili": [25, 25, 25, 25]
-    }
-]
-matrix_options = driver.get_elements("css", "#div15 tbody tr[tp='d']")
-for index in range(len(matrix_options)):
-    options = matrix_options[index].find_elements(By.CSS_SELECTOR, "td:not(.scalerowtitletd)")
+    # 2 多选
+    SerialNumber = driver.get_elements("css", "#div2 div.ui-checkbox")
+    bili = [100, 100, 20, 30, 50, 20]
+    values = ["填0", "填1", "填2"]  # 有填空待填的内容
     flag = False
     while not flag:
-        for count in range(len(subkeys_list[index]['bili'])):
+        for count in range(len(bili)):
             index = duoxuan(bili[count])
             if index:
-                options[count].click()
-                time.sleep(0.3)
+                SerialNumber[count].click()
+                if count == 0:  # 如果第一个选项有填空，则==0，第二个选项有填空，==1 ...
+                    temp_loc: WebElement = SerialNumber[count].find_element(By.CSS_SELECTOR, "input.OtherText")
+                    temp_loc.send_keys(random.choices(values))
+                elif count == 1:
+                    temp_loc: WebElement = SerialNumber[count].find_element(By.CSS_SELECTOR, "input.OtherText")
+                    temp_loc.send_keys(random.choices(values))
                 flag = True
 
-# 16 多选题-最多选择3项
-max_options = 3  # 最多选3项，就是=3
-bili = randomBili(5)
-SerialNumber = driver.get_elements("css", "#div16 div.ui-checkbox")
-temp = []
-for i in range(max_options):
-    if duoxuan(bili[i]):
-        temp.append(i)
-if len(temp) != 0:
-    for j in temp:
-        SerialNumber[j].click()
-else:
-    SerialNumber[random.randint(0, len(matrix_options))].click()
+    # 3 填空题
+    SerialNumber = driver.get_element("css", "#div3 div.ui-input-text input")
+    bili = randomBili(3)
+    values = ["填0", "填1", "填2"]
+    SerialNumber.send_keys(values[danxuan(bili)])
 
-# 17 文件上传题
-file_path = ["D:\sojump\src\conf\题型配置文件夹", "D:\sojump\src\conf\questionTypeConfiguration.yaml"]
-InputElement = driver.get_element("css", "#div17 input#html5_1hdvvmojq98ud3qm6f2egel44")
-driver.fillIn("css", "#div17 input#html5_1hdvvmojq98ud3qm6f2egel44", random.choice(file_path))
-time.sleep(5)
+    # 4 下拉框题
+    driver.click("css", "#div4 .select2-selection.select2-selection--single")
+    options = driver.get_elements("css", "#select2-q4-results li")  # 第4题，就是q4
+    options = options[1:]  # 去掉第一个选项
+    time.sleep(0.3)
+    options[danxuan(bili)].click()
 
-# 提交
-s_time: int = 5     # 等待5秒后提交
-# submit(driver, s_time)
-submit(driver, random.randint(5, 10))   # 随机等待5-10秒提交
-verify(driver)
+    # 5 多选题-至少选3项
+    SerialNumber = driver.get_elements("css", "#div5 div.ui-checkbox")
+    bili = randomBili(4)
+    min_option = 3
+    selected_answers = []
+    temp_flag = 0
+    while len(selected_answers) < min_option:
+        for count in range(len(bili)):
+            if duoxuan(bili[count]):
+                selected_answers.append(count)
+                selected_answers = list(set(selected_answers))
+                temp_flag += 1
+        if len(selected_answers) < min_option:
+            temp_flag = 0
+    for idx in selected_answers:
+        SerialNumber[idx].click()
 
+    # 6 单选矩形题、矩阵量表题
+    matrix_options = driver.get_elements("css", "#div6 tbody tr[tp='d']")
+    subkeys_length = len(matrix_options)
+    for index in range(len(matrix_options)):
+        bili = randomBili(4)
+        options = matrix_options[index].find_elements(By.CSS_SELECTOR, "td:not(.scalerowtitletd)")
+        options[danxuan(bili)].click()
+
+    # 7 排序题
+    jmix_options = driver.get_elements("css", "#div7 ul li")
+    for i in range(1, len(jmix_options) + 1):
+        index = random.randint(i, len(jmix_options))
+        driver.get_element("css", f"#div7 > ul > li:nth-child({index})").click()
+        time.sleep(0.5)
+
+    # 8 量表题
+    SerialNumber = driver.get_elements("css", '#div8 ul[tp="d"] li')
+    # bili = randomBili(2)  # 生成随机比例
+    bili = [20, 20, 20, 20]
+    index = danxuan(bili)
+    SerialNumber[index].click()
+
+    # 9 多项填空
+    SerialNumber = driver.get_elements("css", "#div9 .topictext span.textCont")
+    # 第一个空
+    bili = randomBili(3)
+    values = ["张三", "李四", "王五"]
+    SerialNumber[0].send_keys(values[danxuan(bili)])
+    # 第二个空
+    bili = randomBili(3)
+    values = [23, 24, 30]
+    SerialNumber[1].send_keys(values[danxuan(bili)])
+    # 第三个空
+    bili = randomBili(3)
+    values = ["135000000", "151000000", "198000000"]
+    SerialNumber[2].send_keys(values[danxuan(bili)])
+
+    # 10 多级下拉题-选项不随机
+    subkeys_list = [
+        {
+            "subkeys_qid": 1,
+            "value": "华北地区"
+        },
+        {
+            "subkeys_qid": 2,
+            "value": "山东省"
+        },
+        {
+            "subkeys_qid": 3,
+            "value": "青岛市"
+        },
+        {
+            "subkeys_qid": 4,
+            "value": "黄岛区"
+        }
+    ]
+    driver.click("css", "#div10 input#q10")  # 第10题，就是div0, q10
+    for i in range(len(subkeys_list)):
+        select_element = driver.get_element("css",
+                                            f'#divFrameData div.ui-select:nth-child({subkeys_list[i]["subkeys_qid"]}) select')
+        if select_element:
+            driver.executeJsScript(f"arguments[0].value='{subkeys_list[i]['value']}';", select_element)
+            driver.executeJsScript("arguments[0].dispatchEvent(new Event('change'));", select_element)
+        time.sleep(0.8)
+    driver.click("css", ".layer_save_btn a")
+
+    # ###############################################
+    # 点击下一页
+    next_page(driver)
+    # ###############################################
+
+    # 11 多级下拉题-选项随机
+    try:
+        numberOfDropDownBoxes = 3  # 下拉框个数
+        driver.click("css", "#div11 input#q11")  # 第11题，就是div11, q11
+        option_list = []
+        select_elements = driver.get_elements("css", "#divFrameData .layer_content select")
+        for index in range(1, int(numberOfDropDownBoxes) + 1):
+            select_element = select_elements[index - 1]
+            if select_element:
+                __option = select_element.find_elements(By.CSS_SELECTOR, "option")  # 获取所有下拉选项
+                if len(__option) > 0:
+                    __option.pop(0)  # 排除第一个
+                    selected_option = random.choice(__option)
+                    option_list.append(selected_option)
+                    driver.executeJsScript(f"arguments[0].value='{selected_option.text}';", select_element)
+                    driver.executeJsScript("arguments[0].dispatchEvent(new Event('change'));", select_element)
+                    time.sleep(0.5)
+                else:
+                    log.error("未找到下拉框中的内容！")
+    except Exception as e:
+        log.warning({str(e)})
+    time.sleep(0.5)
+    driver.click("css", ".layer_save_btn a")
+
+    # 12 矩阵填空题
+    subkeys_list = [
+        {
+            "subkeys_qid": 1,
+            "value": ["差", "一般", "好", "极好"],
+            "bili": [25, 25, 25, 25]
+        },
+        {
+            "subkeys_qid": 2,
+            "value": ["差", "一般", "好", "极好"],
+            "bili": [25, 25, 25, 25]
+        },
+        {
+            "subkeys_qid": 3,
+            "value": ["差", "一般", "好", "极好"],
+            "bili": [25, 25, 25, 25]
+        }
+    ]
+    options = driver.get_elements("css", "#div12 div.ui-input-text textarea")
+    for index in range(len(subkeys_list)):
+        options[index].send_keys(subkeys_list[index]["value"][danxuan(subkeys_list[index]["bili"])])
+        time.sleep(0.3)
+
+    # 13 矩阵滑条题
+    subkeys_list = [
+        {
+            "subkeys_qid": 1,
+            "value_random": {
+                "flag": True,
+                "min": 0,
+                "max": 100
+            },
+            "value": [10, 22, 23, 80]
+        },
+        {
+            "subkeys_qid": 2,
+            "value_random": {
+                "flag": True,
+                "min": 0,
+                "max": 100
+            },
+            "value": [50, 70, 88, 93]
+        }
+    ]
+    options = driver.get_elements("css", "#div13 input.ui-slider-input")
+    for index in range(len(subkeys_list)):
+        if subkeys_list[index]['value_random']:
+            fill_value = random.randint(subkeys_list[index]['value_random']['min'],
+                                        subkeys_list[index]['value_random']['max'])
+            options[index].send_keys(fill_value)
+            time.sleep(0.3)
+        else:
+            fill_value = subkeys_list[index]['value']
+            options[index].send_keys(fill_value)
+            time.sleep(0.3)
+
+    # 14 矩阵量表题
+    matrix_options = driver.get_elements("css", "#div14 tbody tr[tp='d']")
+    subkeys_length = len(matrix_options)
+    for index in range(len(matrix_options)):
+        bili = randomBili(4)
+        options = matrix_options[index].find_elements(By.CSS_SELECTOR, "td:not(.scalerowtitletd)")
+        options[danxuan(bili)].click()
+
+    # 15 多选矩阵题
+    subkeys_list = [
+        {
+            "subkeys_qid": 1,
+            "bili": [25, 25, 25, 25]
+        },
+        {
+            "subkeys_qid": 2,
+            "bili": [25, 25, 25, 25]
+        },
+        {
+            "subkeys_qid": 3,
+            "bili": [25, 25, 25, 25]
+        },
+        {
+            "subkeys_qid": 4,
+            "bili": [25, 25, 25, 25]
+        }
+    ]
+    matrix_options = driver.get_elements("css", "#div15 tbody tr[tp='d']")
+    for index in range(len(matrix_options)):
+        options = matrix_options[index].find_elements(By.CSS_SELECTOR, "td:not(.scalerowtitletd)")
+        flag = False
+        while not flag:
+            for count in range(len(subkeys_list[index]['bili'])):
+                index = duoxuan(bili[count])
+                if index:
+                    options[count].click()
+                    time.sleep(0.3)
+                    flag = True
+
+    # 16 多选题-最多选择3项
+    SerialNumber = driver.get_elements("css", "#div16 div.ui-checkbox")
+    bili = [100, 100, 100, 100, 100]
+    max_option = 3  # 最多选择3项
+    selected_answers = []
+    for count in range(len(bili)):
+        if len(selected_answers) < max_option:
+            if duoxuan(bili[count]):
+                selected_answers.append(count)
+                selected_answers = list(set(selected_answers))
+    for idx in selected_answers:
+        SerialNumber[idx].click()
+
+    try:
+        # 提交
+        s_time: int = 5  # 等待5秒后提交
+        # submit(driver, s_time)
+        submit(driver, random.randint(5, 10))  # 随机等待5-10秒提交
+    except:
+        pass
+
+
+def run():
+    global _count
+    WJX_URL = "https://www.wjx.cn/vm/hIVIpS7.aspx"
+    driver = BasePage()
+    while _count < 3:  # 设定目标份数
+        driver.open_url(WJX_URL)
+        before_url = driver.get_url()
+        handle_wjx(driver)
+        driver.verify()
+        time.sleep(1)
+        if before_url != "https://www.wjx.cn/wjx/join/completemobile2.aspx?":
+            with lock:
+                _count += 1
+            log.success(
+                "\033[35m" + f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{_count}份！" + "\033[0m")
+
+
+if __name__ == "__main__":
+    try:
+        if read_ini_file("proxy", "USE_IP_PROXY", file_path=r"D:\sojump\main\线性结构脚本配置.ini") == "False":
+            threads = []
+            for i in range(2):
+                t = threading.Thread(target=run)
+                threads.append(t)
+                t.start()
+            for t in threads:
+                t.join()
+        else:
+            run()
+    except KeyboardInterrupt:
+        exit()
