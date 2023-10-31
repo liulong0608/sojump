@@ -330,6 +330,10 @@ def run():
                 _count += 1
             log.success(
                 "\033[35m" + f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{_count}份！" + "\033[0m")
+            if read_ini_file("proxy", "USE_IP_PROXY", file_path=r"D:\sojump\main\线性结构脚本配置.ini") == "True":
+                driver.quit()
+                time.sleep(1)
+                driver = BasePage()
 
 
 if __name__ == "__main__":
