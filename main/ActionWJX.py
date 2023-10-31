@@ -315,12 +315,14 @@ def handle_wjx(driver):
         pass
 
 
-def run():
+def run(x_axi, y_axi):
     global _count
     WJX_URL = "https://www.wjx.cn/vm/hIVIpS7.aspx"
-    driver = BasePage()
-    while _count < 3:  # 设定目标份数
+    driver = BasePage(x_axi, y_axi)
+    num = read_ini_file("copies", "num", file_path=r"D:\sojump\main\线性结构脚本配置.ini")
+    while _count < int(num):
         driver.open_url(WJX_URL)
+        driver.clear_cookies()
         before_url = driver.get_url()
         handle_wjx(driver)
         driver.verify()
@@ -332,6 +334,8 @@ def run():
                 "\033[35m" + f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{_count}份！" + "\033[0m")
             if read_ini_file("proxy", "USE_IP_PROXY", file_path=r"D:\sojump\main\线性结构脚本配置.ini") == "True":
                 driver.quit()
+                if _count == int(num):
+                    break
                 time.sleep(1)
                 driver = BasePage()
 
@@ -341,12 +345,13 @@ if __name__ == "__main__":
         if read_ini_file("proxy", "USE_IP_PROXY", file_path=r"D:\sojump\main\线性结构脚本配置.ini") == "False":
             threads = []
             for i in range(2):
-                t = threading.Thread(target=run)
+                x_axi = i * 970
+                t = threading.Thread(target=run, args=(x_axi, 0))
                 threads.append(t)
                 t.start()
             for t in threads:
                 t.join()
         else:
-            run()
+            run(x_axi=None, y_axi=None)
     except KeyboardInterrupt:
         exit()

@@ -30,29 +30,31 @@ log = LoguruLogger(r"/src/common/logs/sojump.log", stream=1).get_logger()
 
 class BasePage:
 
-    def __init__(self):
-        self.driver = self.new_driver()
+    def __init__(self, x_axi=None, y_axi=None):
+        self.driver = self.new_driver(x_axi, y_axi)
         self.wait: WebDriverWait = WebDriverWait(self.driver, timeout=20, poll_frequency=0.8)
 
     @staticmethod
-    def new_driver() -> WebDriver:
+    def new_driver(x_axi, y_axi) -> WebDriver:
         service = Service(read_ini_file("chromeDriver", "path"))
         wx = read_ini_file("environment", "USE_WX", file_path=r"D:\sojump\main\线性结构脚本配置.ini")
         proxy = read_ini_file("proxy", "USE_IP_PROXY", file_path=r"D:\sojump\main\线性结构脚本配置.ini")
         driver = webdriver.Chrome(service=service,
                                   options=driver_options(wx, proxy))
-        driver.maximize_window()
+        if x_axi is None and y_axi is None:
+            driver.maximize_window()
+        else:
+            driver.set_window_size(970, 1440)
+            driver.set_window_position(x_axi, y_axi)
         driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument',
                                {'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'})
         return driver
 
-    @staticmethod
-    def clear_cookies(driver):
+    def clear_cookies(self):
         """
         清除Selenium中的cookie
-        :param driver: Selenium浏览器实例
         """
-        driver.delete_all_cookies()
+        self.driver.delete_all_cookies()
 
     def quit(self):
         self.driver.quit()
