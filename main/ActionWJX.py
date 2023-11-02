@@ -321,7 +321,18 @@ def run(x_axi, y_axi):
     driver = BasePage(x_axi, y_axi)
     num = read_ini_file("copies", "num", file_path=r"D:\sojump\main\线性结构脚本配置.ini")
     while _count < int(num):
-        driver.open_url(WJX_URL)
+        try:
+            driver.open_url(WJX_URL)
+            try:
+                msg = driver.driver.find_element(By.CSS_SELECTOR, ".layui-layer-content").text
+                if str(msg).startswith("您之前已经回答了部分题目，是否继续上次回答"):
+                    driver.click("css", ".layui-layer-btn.layui-layer-btn- a.layui-layer-btn1")
+            except:
+                pass
+        except Exception as e:
+            log.error(f"Error occurred while opening url: {str(e)}")
+            driver.quit()
+            continue
         driver.clear_cookies()
         before_url = driver.get_url()
         handle_wjx(driver)
@@ -337,7 +348,7 @@ def run(x_axi, y_axi):
                 if _count == int(num):
                     break
                 time.sleep(1)
-                driver = BasePage()
+                driver = BasePage(x_axi, y_axi)
 
 
 if __name__ == "__main__":
