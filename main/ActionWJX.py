@@ -8,16 +8,18 @@
 # ====/******/=====
 """
 Python version： 3.10.9
-Chrome version： 118.0.5993.89
-chromedriver version： 118.0.5993.88
+Chrome version： 119.0.6045.124
+chromedriver version： 119.0.6045.105
 
 代码采用线性结构
 """
+import os
 import random
 import threading
 import time
 from typing import List, Text
 
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.wait import WebDriverWait
@@ -28,22 +30,28 @@ from public.pages.base_page import BasePage
 from src.common.executive_sojump import randomBili
 from src.utils.danxuan_duoxuan import danxuan, duoxuan
 from src.utils.next_page import next_page
-from src.utils.obtain_all_blocks import get_all_blocks
-from src.utils.querySelector import querySelectorAll
 from src.utils.read_config import read_ini_file
 from src.utils.submit import submit
 
 lock = threading.Lock()
 _count = 0
 
+WJX_URL = "https://www.wjx.cn/vm/hIVIpS7.aspx"  # 问卷地址
+# ####################################################################
+# 全局变量
+current_path = os.getcwd() + "\\"
+
+
+# ####################################################################
+
 
 def handle_wjx(driver):
-    # ####################################################################
-    # 全局变量
-    # ####################################################################
-
     # driver.clear_cookies(driver)    # 清除cookies
     # ####################################################################
+    try:
+        driver.driver.find_element(By.CSS_SELECTOR, ".slideChunkWord").click()
+    except:
+        pass
     # 1 单选
     SerialNumber = driver.get_elements("css", "#div1 div.ui-radio")  # 第一题，就是div1
     # bili = randomBili(2)  # 生成随机比例
@@ -317,25 +325,34 @@ def handle_wjx(driver):
 
 def run(x_axi, y_axi):
     global _count
-    WJX_URL = "https://www.wjx.cn/vm/hIVIpS7.aspx"
+    _WJX_URL = WJX_URL
     driver = BasePage(x_axi, y_axi)
-    num = read_ini_file("copies", "num", file_path=r"D:\sojump\main\线性结构脚本配置.ini")
+    num = read_ini_file("copies", "num", file_path=current_path + "线性结构脚本配置.ini")
     while _count < int(num):
         try:
-            driver.open_url(WJX_URL)
+            driver.open_url(_WJX_URL)
+            star_time = time.time()
             try:
                 msg = driver.driver.find_element(By.CSS_SELECTOR, ".layui-layer-content").text
                 if str(msg).startswith("您之前已经回答了部分题目，是否继续上次回答"):
                     driver.click("css", ".layui-layer-btn.layui-layer-btn- a.layui-layer-btn1")
             except:
                 pass
+            driver.clear_cookies()
         except Exception as e:
             log.error(f"Error occurred while opening url: {str(e)}")
             driver.quit()
+            driver = BasePage(x_axi, y_axi)
             continue
-        driver.clear_cookies()
         before_url = driver.get_url()
-        handle_wjx(driver)
+        if driver.driver.execute_script(
+                "return document.readyState;") == "complete" and time.time() - star_time < 60:  # 判断页面是否加载完
+            handle_wjx(driver)
+        else:
+            log.warning("60s内页面未加载完，重新打开浏览器")
+            driver.quit()
+            driver = BasePage(x_axi, y_axi)
+            continue
         driver.verify()
         time.sleep(1)
         if before_url != "https://www.wjx.cn/wjx/join/completemobile2.aspx?":
@@ -343,7 +360,7 @@ def run(x_axi, y_axi):
                 _count += 1
             log.success(
                 "\033[35m" + f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{_count}份！" + "\033[0m")
-            if read_ini_file("proxy", "USE_IP_PROXY", file_path=r"D:\sojump\main\线性结构脚本配置.ini") == "True":
+            if read_ini_file("proxy", "USE_IP_PROXY", file_path=current_path + "线性结构脚本配置.ini") == "True":
                 driver.quit()
                 if _count == int(num):
                     break
@@ -353,7 +370,7 @@ def run(x_axi, y_axi):
 
 if __name__ == "__main__":
     try:
-        if read_ini_file("proxy", "USE_IP_PROXY", file_path=r"D:\sojump\main\线性结构脚本配置.ini") == "False":
+        if read_ini_file("proxy", "USE_IP_PROXY", file_path=current_path + "线性结构脚本配置.ini") == "False":
             threads = []
             for i in range(2):
                 x_axi = i * 970
@@ -363,6 +380,6 @@ if __name__ == "__main__":
             for t in threads:
                 t.join()
         else:
-            run(x_axi=None, y_axi=None)
+            run(x_axi=-10, y_axi=0)
     except KeyboardInterrupt:
         exit()
