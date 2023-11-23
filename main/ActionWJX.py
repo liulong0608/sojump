@@ -25,7 +25,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from config.globalparam import log
+from config.globalparam import log, linear_config_path
 from public.pages.base_page import BasePage
 from src.common.executive_sojump import randomBili
 from src.utils.danxuan_duoxuan import danxuan, duoxuan
@@ -37,16 +37,11 @@ lock = threading.Lock()
 _count = 0
 
 WJX_URL = "https://www.wjx.cn/vm/hIVIpS7.aspx"  # 问卷地址
-# ####################################################################
-# 全局变量
-current_path = os.getcwd() + "\\"
 
 
 # ####################################################################
-
 
 def handle_wjx(driver):
-    # driver.clear_cookies(driver)    # 清除cookies
     # ####################################################################
     try:
         driver.driver.find_element(By.CSS_SELECTOR, ".slideChunkWord").click()
@@ -123,8 +118,9 @@ def handle_wjx(driver):
     jmix_options = driver.get_elements("css", "#div7 ul li")
     for i in range(1, len(jmix_options) + 1):
         index = random.randint(i, len(jmix_options))
-        driver.get_element("css", f"#div7 > ul > li:nth-child({index})").click()
-        time.sleep(0.5)
+        if index != 5:
+            driver.get_element("css", f"#div7 > ul > li:nth-child({index})").click()
+            time.sleep(0.5)
 
     # 8 量表题
     SerialNumber = driver.get_elements("css", '#div8 ul[tp="d"] li')
@@ -264,9 +260,22 @@ def handle_wjx(driver):
 
     # 14 矩阵量表题
     matrix_options = driver.get_elements("css", "#div14 tbody tr[tp='d']")
-    subkeys_length = len(matrix_options)
+    subkeys_list = [
+        {
+            "subkeys_qid": 1,
+            "bili": [0, 0, 0, 0, 100]
+        },
+        {
+            "subkeys_qid": 2,
+            "bili": [0, 0, 0, 0, 100]
+        },
+        {
+            "subkeys_qid": 3,
+            "bili": [100, 0, 0, 0, 0]
+        }
+    ]
     for index in range(len(matrix_options)):
-        bili = randomBili(4)
+        bili = subkeys_list[index]["bili"]
         options = matrix_options[index].find_elements(By.CSS_SELECTOR, "td:not(.scalerowtitletd)")
         options[danxuan(bili)].click()
 
@@ -295,7 +304,7 @@ def handle_wjx(driver):
         flag = False
         while not flag:
             for count in range(len(subkeys_list[index]['bili'])):
-                index = duoxuan(bili[count])
+                index = duoxuan(subkeys_list[index]['bili'][count])
                 if index:
                     options[count].click()
                     time.sleep(0.3)
@@ -303,16 +312,23 @@ def handle_wjx(driver):
 
     # 16 多选题-最多选择3项
     SerialNumber = driver.get_elements("css", "#div16 div.ui-checkbox")
-    bili = [100, 100, 100, 100, 100]
+    bili = randomBili(5)
     max_option = 3  # 最多选择3项
     selected_answers = []
-    for count in range(len(bili)):
-        if len(selected_answers) < max_option:
-            if duoxuan(bili[count]):
-                selected_answers.append(count)
-                selected_answers = list(set(selected_answers))
+    while True:
+        for count in range(len(bili)):
+            if len(selected_answers) < max_option:
+                if duoxuan(bili[count]):
+                    selected_answers.append(count)
+                    selected_answers = list(set(selected_answers))
+                    continue
+            else:
+                break
+        if len(selected_answers) != 0:
+            break
     for idx in selected_answers:
         SerialNumber[idx].click()
+########################################################################################################################
 
     try:
         # 提交
@@ -327,7 +343,7 @@ def run(x_axi, y_axi):
     global _count
     _WJX_URL = WJX_URL
     driver = BasePage(x_axi, y_axi)
-    num = read_ini_file("copies", "num", file_path=current_path + "线性结构脚本配置.ini")
+    num = read_ini_file("copies", "num", file_path=linear_config_path)  # 读取配置文件中的份数
     while _count < int(num):
         try:
             driver.open_url(_WJX_URL)
@@ -360,7 +376,7 @@ def run(x_axi, y_axi):
                 _count += 1
             log.success(
                 "\033[35m" + f"提交时间：{time.strftime('%H:%M:%S', time.localtime(time.time()))}，已提交{_count}份！" + "\033[0m")
-            if read_ini_file("proxy", "USE_IP_PROXY", file_path=current_path + "线性结构脚本配置.ini") == "True":
+            if read_ini_file("proxy", "USE_IP_PROXY", file_path=linear_config_path) == "True":
                 driver.quit()
                 if _count == int(num):
                     break
@@ -370,7 +386,7 @@ def run(x_axi, y_axi):
 
 if __name__ == "__main__":
     try:
-        if read_ini_file("proxy", "USE_IP_PROXY", file_path=current_path + "线性结构脚本配置.ini") == "False":
+        if read_ini_file("proxy", "USE_IP_PROXY", file_path=linear_config_path) == "False":
             threads = []
             for i in range(2):
                 x_axi = i * 970

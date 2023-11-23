@@ -11,7 +11,7 @@ import configparser
 from typing import Text, Union
 
 
-def read_ini_file(section: Text, option: Text, file_path: Text = r"D:\sojump\config\config.ini") -> Union[Text, bool, None]:
+def read_ini_file(section: Text, option: Text, file_path: Text = None) -> Union[Text, bool, None]:
     """
     读取 INI 配置文件
     :param file_path: ini配置文件路径

@@ -21,11 +21,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
+from config.globalparam import CHROMEDRIVER_PATH, linear_config_path, log_path
 from src.utils.logurus import LoguruLogger
 from src.utils.read_config import read_ini_file
 from src.utils.driver_options import driver_options
 
-log = LoguruLogger(r"/src/common/logs/sojump.log", stream=1).get_logger()
+log = LoguruLogger(log_file_path=log_path, stream=False).get_logger()
 
 
 class BasePage:
@@ -36,9 +38,9 @@ class BasePage:
 
     @staticmethod
     def new_driver(x_axi, y_axi) -> WebDriver:
-        service = Service(read_ini_file("chromeDriver", "path"))
-        wx = read_ini_file("environment", "USE_WX", file_path=r"D:\sojump\main\线性结构脚本配置.ini")
-        proxy = read_ini_file("proxy", "USE_IP_PROXY", file_path=r"D:\sojump\main\线性结构脚本配置.ini")
+        service = Service(CHROMEDRIVER_PATH)
+        wx = read_ini_file("environment", "USE_WX", file_path=linear_config_path)
+        proxy = read_ini_file("proxy", "USE_IP_PROXY", file_path=linear_config_path)
         driver = webdriver.Chrome(service=service,
                                   options=driver_options(wx, proxy))
         if x_axi is None and y_axi is None:

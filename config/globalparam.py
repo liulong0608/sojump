@@ -11,15 +11,17 @@ import os
 from src.utils.logurus import LoguruLogger
 
 # 读取配置文件
-config_file_path = os.path.split(os.path.realpath(__file__))[0] + '\\'  # D:\Sojump\config
-
+config_file_path = os.path.split(os.path.realpath(__file__))[0]
+# 项目根目录
+prj_path = os.path.dirname(config_file_path)
+# 线性结构题型配置文件路径
+linear_config_path = os.path.join(prj_path, 'main', '线性结构脚本配置.ini')
 # 题型配置文件路径
-question_config_path = config_file_path + 'question_config.json'
-
+question_config_path = os.path.join(prj_path, 'config', 'question_config.json')
 # 浏览器驱动路径, 默认使用谷歌浏览器
-CHROMEDRIVER_PATH = r" D:\sojump\config\chromedriver.exe"  # Chrome浏览器驱动路径
-EDGEDRIVER_PATH = r"D:\sojump\config\msedgedriver.exe"  # Edge浏览器驱动路径
-FIXEDDRIVER_PATH = r"D:\sojump\config\firefoxdriver.exe"  # Firefox浏览器驱动路径
-
+CHROMEDRIVER_PATH = os.path.join(prj_path, 'config', 'chromedriver.exe')  # Chrome浏览器驱动路径
+EDGEDRIVER_PATH = os.path.join(prj_path, 'config', 'edgedriver.exe')  # Edge浏览器驱动路径
+FIXEDDRIVER_PATH = os.path.join(prj_path, 'config', 'geckodriver.exe')  # Firefox浏览器驱动路径
 # 日志文件路径
-log = LoguruLogger(r"D:\sojump\src\common\logs\WJX.log", stream=1).get_logger()
+log_path = os.path.join(prj_path, 'main', 'logs', 'WJX.log')
+log = LoguruLogger(log_path, stream=True).get_logger()
