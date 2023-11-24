@@ -32,10 +32,13 @@ def get_ip(proxy_url: Text) -> List:
             log.info(f"提取到ip：{ips}")
             return ips
         else:
-            log.error(f"未提取到ip，默认使用本地ip")
+            log.error(f"未提取到ip, 发起重试")
+            return []
     except requests.exceptions.RequestException as e:
         log.error(f"Error occurred while getting IP: {str(e)}")
+        return []
     except Exception as e:
         log.error(f"提取ip发生异常，默认使用本地ip：{str(e)}")
+        return []
 
 

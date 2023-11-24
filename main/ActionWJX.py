@@ -328,13 +328,28 @@ def handle_wjx(driver):
             break
     for idx in selected_answers:
         SerialNumber[idx].click()
+
+    """
+        # 地理位置题
+        try:
+        address = "安徽省安庆市潜山市龙潭乡龙潭乡人民政府"
+        driver.executeJsScript("arguments[0].value='{}'".format(address),
+                               driver.driver.find_element(By.CSS_SELECTOR, "input#q题号"))  # 第2题，就是q2
+        driver.click("css", ".getLocalBtn")
+        driver.switch_to_frame("tag", "iframe")
+        driver.click("css", ".lbs-list div.localres_wrap.divCurLoc a")
+    except Exception as e:
+        log.warning({str(e)})
+    finally:
+        driver.switch_to_default_content()
+    """
 ########################################################################################################################
 
     try:
         # 提交
-        s_time: int = 5  # 等待5秒后提交
-        # submit(driver, s_time)
-        submit(driver, random.randint(5, 10))  # 随机等待5-10秒提交
+        s_time: int = 1  # 等待5秒后提交
+        submit(driver, s_time)
+        # submit(driver, random.randint(5, 10))  # 随机等待5-10秒提交
     except:
         pass
 
@@ -347,6 +362,7 @@ def run(x_axi, y_axi):
     while _count < int(num):
         try:
             driver.open_url(_WJX_URL)
+            driver.clear_cookies()  # 清除cookie
             star_time = time.time()
             try:
                 msg = driver.driver.find_element(By.CSS_SELECTOR, ".layui-layer-content").text
@@ -354,13 +370,13 @@ def run(x_axi, y_axi):
                     driver.click("css", ".layui-layer-btn.layui-layer-btn- a.layui-layer-btn1")
             except:
                 pass
-            driver.clear_cookies()
+            # driver.clear_cookies()
         except Exception as e:
             log.error(f"Error occurred while opening url: {str(e)}")
             driver.quit()
             driver = BasePage(x_axi, y_axi)
             continue
-        before_url = driver.get_url()
+
         if driver.driver.execute_script(
                 "return document.readyState;") == "complete" and time.time() - star_time < 60:  # 判断页面是否加载完
             handle_wjx(driver)
@@ -370,8 +386,10 @@ def run(x_axi, y_axi):
             driver = BasePage(x_axi, y_axi)
             continue
         driver.verify()
-        time.sleep(1)
-        if before_url != "https://www.wjx.cn/wjx/join/completemobile2.aspx?":
+        # time.sleep(1)
+        before_url = driver.get_url()
+        success_msg = driver.get_textContent("css", "div.ValError .submit_tip_color")
+        if "提交成功" in success_msg or before_url in "https://www.wjx.cn/wjx/join/completemobile2.aspx?":
             with lock:
                 _count += 1
             log.success(
@@ -382,6 +400,11 @@ def run(x_axi, y_axi):
                     break
                 time.sleep(1)
                 driver = BasePage(x_axi, y_axi)
+
+        else:
+            log.error("提交失败,大概有题目未完成或验证未通过，重新打开浏览器")
+            driver.quit()
+            driver = BasePage(x_axi, y_axi)
 
 
 if __name__ == "__main__":
