@@ -8,6 +8,7 @@
 # @Software:        PyCharm
 # ====/******/=====
 import random
+from typing import List
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -17,7 +18,7 @@ from src.utils.obtain_ip import get_ip
 from src.utils.read_config import read_ini_file
 
 
-def driver_options(is_wx: bool, is_ip_proxy: bool) -> Options:
+def driver_options(is_wx: bool, is_ip_proxy: bool) -> Options | List:
     option = webdriver.ChromeOptions()
     option.add_experimental_option('excludeSwitches', ['enable-automation'])
     option.add_experimental_option('useAutomationExtension', False)
@@ -29,11 +30,22 @@ def driver_options(is_wx: bool, is_ip_proxy: bool) -> Options:
         )
     if is_ip_proxy == "True" or is_ip_proxy == "true":
         try:
-            _ips = get_ip(proxy_url=read_ini_file("proxy", "PROXY_URL", file_path=r"D:\sojump\main\线性结构脚本配置.ini"))
-            match = random.randint(0, len(_ips) - 1)
-            ip = _ips[match]['ip']
-            port = _ips[match]['port']
-            option.add_argument(f'--proxy-server={ip}:{port}')
+            count = 1
+            while count <= 5:
+                _ips = get_ip(proxy_url=read_ini_file("proxy", "PROXY_URL", file_path=r"D:\sojump\main\线性结构脚本配置.ini"))
+                if len(_ips) != 0:
+                    match = random.randint(0, len(_ips) - 1)
+                    ip = _ips[match]['ip']
+                    port = _ips[match]['port']
+                    option.add_argument(f'--proxy-server={ip}:{port}')
+                    break
+                else:
+                    count += 1
+                    if count == 5:
+                        log.error("已发起5次重试，未获取到代理ip, 请检查代理配置...")
+                        exit()
+                    continue
+
         except Exception as e:
             log.error(f"Error occurred while getting IP.")
     else:
