@@ -52,11 +52,24 @@ class BasePage:
                                {'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'})
         return driver
 
-    def clear_cookies(self):
+    def clear_cookies(self) -> None:
         """
         清除Selenium中的cookie
         """
-        self.driver.delete_all_cookies()
+        CLEAR_COOKIES = r"""
+        function clearCookie() {
+                var keys = document.cookie.match(/[^ =;]+(?=\=)/g);
+                if (keys) {
+                    for (var i = keys.length; i--;) {
+                        document.cookie = keys[i] + '=0;path=/;expires=' + new Date(0).toUTCString();
+                        document.cookie = keys[i] + '=0;path=/;domain=' + document.domain + ';expires=' + new Date(0).toUTCString();
+                        document.cookie = keys[i] + '=0;path=/;domain=kevis.com;expires=' + new Date(0).toUTCString();
+                    }
+                }
+            }
+        clearCookie();
+        """
+        self.driver.execute_script(CLEAR_COOKIES)
 
     def quit(self):
         self.driver.quit()
@@ -91,7 +104,8 @@ class BasePage:
             "id": By.ID,
             "name": By.NAME,
             "xpath": By.XPATH,
-            "css": By.CSS_SELECTOR
+            "css": By.CSS_SELECTOR,
+            "tag": By.TAG_NAME
         }
         try:
             locator = (selector_map[by], value)  # 元素定位表达式
@@ -101,7 +115,7 @@ class BasePage:
         except NoSuchElementException:
             log.error(f"Element not found by {by}: {value}")
         except TimeoutException:
-            log.error(f"Element not found by {by}: {value}")
+            log.error(f"Elment finding timeout by {by}: {value}")
 
     def get_elements(self, by: Text, value: Text) -> List[WebElement]:
         """
@@ -145,6 +159,23 @@ class BasePage:
         element = self.get_element(by, value)
         element.send_keys(text)
 
+    def switch_to_frame(self, by: Text, value: Text) -> None:
+        """
+        切换到iframe
+        :param by: 定位方式
+        :param value: 元素路径
+        :return: None
+        """
+        element = self.get_element(by, value)
+        self.driver.switch_to.frame(element)
+
+    def switch_to_default_content(self) -> None:
+        """
+        切换到默认iframe
+        :return: None
+        """
+        self.driver.switch_to.default_content()
+
     def executeJsScript(self, script: Text, args: Any) -> None:
         """
         执行js脚本
@@ -164,6 +195,19 @@ class BasePage:
         """
         element = self.get_element(by, value)
         return element.get_attribute(attribute)
+
+    def get_textContent(self, by: Text, value: Text) -> Text:
+        """
+        获取元素文本内容
+        :param by: 定位方式
+        :param value: 元素路径
+        :return: 文本内容
+        """
+        try:
+            element = self.get_element(by, value)
+            return element.text
+        except AttributeError:
+            return ""
 
     def get_url(self) -> Text:
         """
