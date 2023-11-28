@@ -347,9 +347,9 @@ def handle_wjx(driver):
 
     try:
         # 提交
-        s_time: int = 1  # 等待5秒后提交
-        submit(driver, s_time)
-        # submit(driver, random.randint(5, 10))  # 随机等待5-10秒提交
+        s_time: int = 5  # 等待5秒后提交
+        # submit(driver, s_time)
+        submit(driver, random.randint(5, 10))  # 随机等待5-10秒提交
     except:
         pass
 
@@ -377,8 +377,11 @@ def run(x_axi, y_axi):
             driver = BasePage(x_axi, y_axi)
             continue
 
+        before_url = driver.get_url()
+        wj_flag = driver.getAttribute("css", "#divPowerBy a", "title")
         if driver.driver.execute_script(
-                "return document.readyState;") == "complete" and time.time() - star_time < 60:  # 判断页面是否加载完
+                "return document.readyState;") == "complete" and wj_flag == "问卷星_不止问卷调查/在线考试" and time.time() - star_time < 60:  # 判断页面是否加载完
+            log.info("问卷加载完毕，开始执行刷题")
             handle_wjx(driver)
         else:
             log.warning("60s内页面未加载完，重新打开浏览器")
@@ -387,7 +390,6 @@ def run(x_axi, y_axi):
             continue
         driver.verify()
         # time.sleep(1)
-        before_url = driver.get_url()
         success_msg = driver.get_textContent("css", "div.ValError .submit_tip_color")
         if "提交成功" in success_msg or before_url in "https://www.wjx.cn/wjx/join/completemobile2.aspx?":
             with lock:
