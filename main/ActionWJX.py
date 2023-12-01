@@ -32,6 +32,7 @@ from src.utils.danxuan_duoxuan import danxuan, duoxuan
 from src.utils.next_page import next_page
 from src.utils.read_config import read_ini_file
 from src.utils.submit import submit
+from src.utils.obtain_all_blocks import get_all_blocks
 
 lock = threading.Lock()
 _count = 0
@@ -42,13 +43,18 @@ WJX_URL = "https://www.wjx.cn/vm/hIVIpS7.aspx"  # 问卷地址
 # ####################################################################
 
 def handle_wjx(driver):
+    idx = 0
+    flag = False  # 定义一个标志用于判断刷题是否顺利完成
     # ####################################################################
     try:
         driver.driver.find_element(By.CSS_SELECTOR, ".slideChunkWord").click()
     except:
         pass
+    blocks = get_all_blocks(driver)
     # 1 单选
-    SerialNumber = driver.get_elements("css", "#div1 div.ui-radio")  # 第一题，就是div1
+    # SerialNumber = driver.get_elements("css", f"#div{idx} div.ui-radio")  # 第一题，就是div1
+    SerialNumber = blocks[idx].find_elements(By.CSS_SELECTOR, "div.ui-radio")
+    idx += 1
     # bili = randomBili(2)  # 生成随机比例
     bili = [0, 100]
     values = ["填0", "填1", "填2"]  # 有填空待填的内容
@@ -59,7 +65,8 @@ def handle_wjx(driver):
         temp_loc.send_keys(random.choices(values))
 
     # 2 多选
-    SerialNumber = driver.get_elements("css", "#div2 div.ui-checkbox")
+    SerialNumber = driver.get_elements("css", f"#div2 div.ui-checkbox")
+    idx += 1
     bili = [100, 100, 20, 30, 50, 20]
     values = ["填0", "填1", "填2"]  # 有填空待填的内容
     flag = False
@@ -343,6 +350,10 @@ def handle_wjx(driver):
     finally:
         driver.switch_to_default_content()
     """
+
+    # 滚动到底部
+    driver.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
 ########################################################################################################################
 
     try:
@@ -350,12 +361,17 @@ def handle_wjx(driver):
         s_time: int = 5  # 等待5秒后提交
         # submit(driver, s_time)
         submit(driver, random.randint(5, 10))  # 随机等待5-10秒提交
+        try:
+            success_msg = driver.driver.find_element(By.CSS_SELECTOR, "div.ValError .submit_tip_color").text
+        except:
+            pass
     except:
         pass
+    return flag == True
 
 
 def run(x_axi, y_axi):
-    global _count
+    global _count, success_msg
     _WJX_URL = WJX_URL
     driver = BasePage(x_axi, y_axi)
     num = read_ini_file("copies", "num", file_path=linear_config_path)  # 读取配置文件中的份数
@@ -377,12 +393,13 @@ def run(x_axi, y_axi):
             driver = BasePage(x_axi, y_axi)
             continue
 
-        before_url = driver.get_url()
         wj_flag = driver.getAttribute("css", "#divPowerBy a", "title")
         if driver.driver.execute_script(
                 "return document.readyState;") == "complete" and wj_flag == "问卷星_不止问卷调查/在线考试" and time.time() - star_time < 60:  # 判断页面是否加载完
             log.info("问卷加载完毕，开始执行刷题")
-            handle_wjx(driver)
+            f = handle_wjx(driver)
+            if not f:
+                break
         else:
             log.warning("60s内页面未加载完，重新打开浏览器")
             driver.quit()
@@ -390,7 +407,11 @@ def run(x_axi, y_axi):
             continue
         driver.verify()
         # time.sleep(1)
-        success_msg = driver.get_textContent("css", "div.ValError .submit_tip_color")
+        try:
+            success_msg = driver.driver.find_element(By.CSS_SELECTOR, "div.ValError .submit_tip_color").text
+        except:
+            pass
+        before_url = driver.get_url()
         if "提交成功" in success_msg or before_url in "https://www.wjx.cn/wjx/join/completemobile2.aspx?":
             with lock:
                 _count += 1
@@ -413,7 +434,7 @@ if __name__ == "__main__":
     try:
         if read_ini_file("proxy", "USE_IP_PROXY", file_path=linear_config_path) == "False":
             threads = []
-            for i in range(2):
+            for i in range(1):
                 x_axi = i * 970
                 t = threading.Thread(target=run, args=(x_axi, 0))
                 threads.append(t)

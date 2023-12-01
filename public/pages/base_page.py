@@ -267,14 +267,13 @@ class BasePage:
             time.sleep(1)
             try:
                 # 点击对话框的确认按钮
-                self.driver.find_element(By.XPATH, '.layui-layer.layui-layer-dialog div a').click()
+                self.driver.find_element(By.CSS_SELECTOR, '.layui-layer.layui-layer-dialog div a').click()
                 time.sleep(1)
                 # 点击智能检测按钮
                 self.driver.find_element(By.XPATH, '//*[@id="SM_BTN_1"]').click()
             except:
                 # 点击智能检测按钮
-                self.driver.find_element(By.CSS_SELECTOR, '#rectMask').click()
-                # self.click("css", "#rectMask")
+                self.driver.find_element(By.CSS_SELECTOR, '#SM_BTN_1').click()
             time.sleep(3)
         except:
             log.info("无验证")
